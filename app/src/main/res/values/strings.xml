@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">Kabadiwala Connect</string>
+    
+    <!-- Onboarding -->
+    <string name="welcome_title">स्वागत है | Welcome</string>
+    <string name="welcome_subtitle">कबाड़ीवाला कनेक्ट आपका साथी है</string>
+    <string name="get_started">शुरू करें | Get Started</string>
+    <string name="skip">छोड़ें | Skip</string>
+    
+    <!-- Language Selection -->
+    <string name="select_language">भाषा चुनें | Select Language</string>
+    <string name="hindi">हिन्दी</string>
+    <string name="marathi">मराठी</string>
+    <string name="english">English</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">मुख्यपृष्ठ | Home</string>
+    <string name="nav_scanner">स्कैनर | Scanner</string>
+    <string name="nav_history">इतिहास | History</string>
+    <string name="nav_dashboard">डैशबोर्ड | Dashboard</string>
+    <string name="nav_profile">प्रोफाइल | Profile</string>
+    
+    <!-- Material Categories -->
+    <string name="category_electronics">इलेक्ट्रॉनिक्स | Electronics</string>
+    <string name="category_plastic">प्लास्टिक | Plastic</string>
+    <string name="category_metal">धातु | Metal</string>
+    <string name="category_paper">कागज | Paper</string>
+    <string name="category_glass">कांच | Glass</string>
+    
+    <!-- Scanner -->
+    <string name="scan_material">सामग्री स्कैन करें | Scan Material</string>
+    <string name="scan_mode">स्कैन मोड</string>
+    <string name="auto_capture">ऑटो कैप्चर | Auto Capture</string>
+    <string name="manual_capture">मैनुअल कैप्चर | Manual Capture</string>
+    <string name="estimate_weight">अनुमानित वजन (kg)</string>
+    <string name="capture_photo">फोटो कैप्चर करें | Capture Photo</string>
+    <string name="next">अगला | Next</string>
+    <string name="back">पीछे | Back</string>
+    
+    <!-- Price Discovery -->
+    <string name="price_discovery">मूल्य खोज | Price Discovery</string>
+    <string name="current_rate">वर्तमान दर | Current Rate</string>
+    <string name="est_value">अनुमानित मूल्य | Estimated Value</string>
+    <string name="epr_credit">EPR क्रेडिट | EPR Credit</string>
+    <string name="net_price">शुद्ध मूल्य | Net Price</string>
+    
+    <!-- Handover -->
+    <string name="handover_protocol">हस्तांतरण प्रोटोकॉल | Handover Protocol</string>
+    <string name="scan_qr_code">QR कोड स्कैन करें | Scan QR Code</string>
+    <string name="take_photo">फोटो खींचें | Take Photo</string>
+    <string name="confirm_handover">हस्तांतरण की पुष्टि करें</string>
+    
+    <!-- History -->
+    <string name="transaction_history">लेनदेन इतिहास | Transaction History</string>
+    <string name="transaction_id">लेनदेन आईडी | TX ID</string>
+    <string name="date">तिथि | Date</string>
+    <string name="weight">वजन | Weight</string>
+    <string name="amount">राशि | Amount</string>
+    <string name="status">स्थिति | Status</string>
+    <string name="status_pending">लंबित | Pending</string>
+    <string name="status_completed">पूर्ण | Completed</string>
+    <string name="status_cancelled">रद्द किया गया | Cancelled</string>
+    
+    <!-- Profile -->
+    <string name="profile">प्रोफाइल | Profile</string>
+    <string name="phone_number">फ़ोन नंबर | Phone Number</string>
+    <string name="total_tons">कुल टन | Total Tons</string>
+    <string name="lifetime_earnings">जीवनकाल के अर्जित | Lifetime Earnings</string>
+    <string name="location">स्थान | Location</string>
+    <string name="logout">लॉग आउट | Logout</string>
+    
+    <!-- Notifications -->
+    <string name="notification_new_handover">नया हस्तांतरण | New Handover</string>
+    <string name="notification_price_update">मूल्य अद्यतन | Price Update</string>
+    <string name="notification_payment">भुगतान सूचना | Payment Notification</string>
+    
+    <!-- Messages -->
+    <string name="msg_loading">लोड हो रहा है… | Loading…</string>
+    <string name="msg_error">त्रुटि | Error</string>
+    <string name="msg_success">सफलता | Success</string>
+    <string name="msg_camera_permission">कृपया कैमरा अनुमति दें | Please grant camera permission</string>
+    <string name="msg_location_permission">कृपया स्थान अनुमति दें | Please grant location permission</string>
+    <string name="msg_speaking">बोलें… | Speak…</string>
+    <string name="msg_processing">संसाधित किया जा रहा है… | Processing…</string>
+    
+</resources>
