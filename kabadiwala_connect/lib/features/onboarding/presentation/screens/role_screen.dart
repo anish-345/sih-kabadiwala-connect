@@ -157,7 +157,7 @@ class _RoleScreenState extends ConsumerState<RoleScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -209,7 +209,7 @@ class _RoleScreenState extends ConsumerState<RoleScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: badgeColor.withOpacity(0.12),
+                      color: badgeColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(

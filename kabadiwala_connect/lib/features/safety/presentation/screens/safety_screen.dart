@@ -147,7 +147,7 @@ class SafetyScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: guide.iconColor.withOpacity(0.12),
+                            color: guide.iconColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(guide.icon, color: guide.iconColor, size: 26),
@@ -162,7 +162,7 @@ class SafetyScreen extends ConsumerWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: guide.dangerColor.withOpacity(0.12),
+                                  color: guide.dangerColor.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(

@@ -60,7 +60,7 @@ class _LanguageScreenState extends ConsumerState<LanguageScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.green.withOpacity(0.25),
+                        color: Colors.green.withValues(alpha: 0.25),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -159,7 +159,7 @@ class _LanguageScreenState extends ConsumerState<LanguageScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),

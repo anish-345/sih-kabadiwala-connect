@@ -69,7 +69,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.green.withOpacity(0.35),
+                                color: Colors.green.withValues(alpha: 0.35),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),

@@ -35,7 +35,7 @@ class NetworkStatusPill extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: isOffline ? Colors.amber.shade900.withOpacity(0.9) : Colors.white.withOpacity(0.2),
+            color: isOffline ? Colors.amber.shade900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isOffline ? Colors.amber.shade300 : Colors.white70,

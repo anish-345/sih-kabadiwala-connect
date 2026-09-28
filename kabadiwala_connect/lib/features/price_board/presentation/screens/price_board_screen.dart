@@ -326,7 +326,7 @@ class _PriceBoardScreenState extends ConsumerState<PriceBoardScreen> {
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: (isUp ? Colors.green : Colors.red).withOpacity(0.12),
+                                color: (isUp ? Colors.green : Colors.red).withValues(alpha: 0.12),
                               ),
                             ),
                           ],
