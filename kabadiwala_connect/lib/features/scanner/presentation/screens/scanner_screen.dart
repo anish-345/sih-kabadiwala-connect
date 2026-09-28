@@ -281,7 +281,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _selectedSubCategory,
+                        initialValue: _selectedSubCategory,
                         decoration: InputDecoration(
                           labelText: 'विशिष्ट श्रेणी (Sub-Category)',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -307,7 +307,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _conditionGrade,
+                        initialValue: _conditionGrade,
                         decoration: InputDecoration(
                           labelText: 'गुणवत्ता / ग्रेड (Condition Grade)',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),

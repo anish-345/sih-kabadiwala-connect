@@ -180,22 +180,18 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       const SizedBox(height: 12),
-                      RadioListTile<String>(
-                        value: 'CASH',
-                        groupValue: _settlementMode,
-                        title: const Text('तुरंत नकद (Spot Cash at Scale)', style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text('तौल होते ही रिसाइक्लर वजन कांटा काउंटर पर नकद देगा।', style: TextStyle(fontSize: 12)),
-                        activeColor: const Color(0xFF2E7D32),
-                        onChanged: (val) => setState(() => _settlementMode = val!),
+                      _buildSettlementOption(
+                        mode: 'CASH',
+                        title: 'तुरंत नकद (Spot Cash at Scale)',
+                        subtitle: 'तौल होते ही रिसाइक्लर वजन कांटा काउंटर पर नकद देगा।',
+                        icon: Icons.payments_outlined,
                       ),
-                      const Divider(height: 1),
-                      RadioListTile<String>(
-                        value: 'UPI',
-                        groupValue: _settlementMode,
-                        title: const Text('यूपीआई / तुरंत बैंक खाता (UPI / IMPS)', style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text('स्कैन होते ही बैंक खाते में ट्रांसफर।', style: TextStyle(fontSize: 12)),
-                        activeColor: const Color(0xFF2E7D32),
-                        onChanged: (val) => setState(() => _settlementMode = val!),
+                      const SizedBox(height: 8),
+                      _buildSettlementOption(
+                        mode: 'UPI',
+                        title: 'यूपीआई / तुरंत बैंक खाता (UPI / IMPS)',
+                        subtitle: 'स्कैन होते ही बैंक खाते में ट्रांसफर।',
+                        icon: Icons.account_balance_outlined,
                       ),
                     ],
                   ),
@@ -264,6 +260,58 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
     );
   }
 
+  Widget _buildSettlementOption({
+    required String mode,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    final isSelected = _settlementMode == mode;
+    return InkWell(
+      onTap: () => setState(() => _settlementMode = mode),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.green.shade50 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade300,
+            width: isSelected ? 2.0 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade400,
+                  width: isSelected ? 6.0 : 2.0,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(icon, color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade700, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isSelected ? const Color(0xFF1B5E20) : Colors.black87)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRecyclerTile(RecyclerData r, MaterialsData lot, String lang) {
     final isSelected = _selectedRecyclerId == r.recyclerId;
     final bonusText = r.priceMultiplier > 1.0 ? '+${((r.priceMultiplier - 1.0) * 100).round()}% बोनस' : 'मानक भाव';
@@ -285,11 +333,17 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Radio<String>(
-              value: r.recyclerId,
-              groupValue: _selectedRecyclerId,
-              activeColor: const Color(0xFF2E7D32),
-              onChanged: (val) => setState(() => _selectedRecyclerId = val),
+            Container(
+              width: 22,
+              height: 22,
+              margin: const EdgeInsets.only(top: 2, right: 12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade400,
+                  width: isSelected ? 6.5 : 2.0,
+                ),
+              ),
             ),
             Expanded(
               child: Column(
