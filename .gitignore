@@ -5,6 +5,8 @@
 .packages
 build/
 **/build/
+build_artifacts/
+*.zip
 
 # Android
 .gradle/
