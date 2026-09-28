@@ -55,7 +55,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
-          build-root-directory: kabadiwala_connect/android
 
       - name: Install Dependencies
         run: flutter pub get
