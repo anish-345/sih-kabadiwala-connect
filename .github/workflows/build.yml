@@ -62,7 +62,7 @@ jobs:
       - name: Run Static Analysis
         run: flutter analyze --no-fatal-infos
 
-      - name: Run Automated Test Suite (16 Core Specs)
+      - name: Run Automated Test Suite (29 Core Specs including Edge AI & SIH Guidelines)
         run: flutter test
 
       - name: Build Debug APK

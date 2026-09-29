@@ -1,0 +1,66 @@
+{
+  "version": "1.0.0",
+  "framework": "YOLOv8-Nano / Edge CV",
+  "classes": [
+    {
+      "id": 0,
+      "key": "pcb",
+      "name": "Printed Circuit Boards (PCB)",
+      "hindi": "प्रिंटेड सर्किट बोर्ड",
+      "marathi": "सर्किट बोर्ड",
+      "defaultSubCategory": "Mid Grade (Motherboards / GPUs)",
+      "category": "PCB",
+      "hazard": "Low - Lead Solder"
+    },
+    {
+      "id": 1,
+      "key": "cable_copper",
+      "name": "Insulated Copper Cables",
+      "hindi": "तांबे के तार व केबल",
+      "marathi": "तांब्याची वायर",
+      "defaultSubCategory": "Heavy Copper Cables (Insulated)",
+      "category": "Cables",
+      "hazard": "None"
+    },
+    {
+      "id": 2,
+      "key": "battery_li",
+      "name": "Lithium-Ion & Lead Batteries",
+      "hindi": "लिथियम-आयन / लेड बैटरी",
+      "marathi": "लिथियम बॅटरी",
+      "defaultSubCategory": "Lithium-Ion Cells (Laptop / EV / Mobile)",
+      "category": "Batteries",
+      "hazard": "High - Fire & Acid Hazard"
+    },
+    {
+      "id": 3,
+      "key": "crt_monitor",
+      "name": "CRT Funnel Glass & Display",
+      "hindi": "सीआरटी मॉनिटर व डिस्प्ले ग्लास",
+      "marathi": "सीआरटी काच",
+      "defaultSubCategory": "CRT Funnel Glass / Monitors",
+      "category": "Displays",
+      "hazard": "Medium - Lead Impregnated"
+    },
+    {
+      "id": 4,
+      "key": "metal_copper",
+      "name": "Copper & Brass Scrap",
+      "hindi": "तांबा व पीतल स्क्रैप",
+      "marathi": "तांबे व पितळ",
+      "defaultSubCategory": "Heavy Copper Cables (Insulated)",
+      "category": "Cables",
+      "hazard": "None"
+    },
+    {
+      "id": 5,
+      "key": "plastic_casing",
+      "name": "ABS / PVC E-Waste Casing",
+      "hindi": "ई-कचरा प्लास्टिक आवरण",
+      "marathi": "प्लॅस्टिक कव्हर",
+      "defaultSubCategory": "Mixed Low-Grade Telecom E-Waste",
+      "category": "Telecom",
+      "hazard": "None"
+    }
+  ]
+}

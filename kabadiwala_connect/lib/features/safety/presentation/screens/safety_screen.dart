@@ -134,8 +134,10 @@ class SafetyScreen extends ConsumerWidget {
             final guide = guides[index - 1];
 
             return Card(
+              color: Colors.white,
+              surfaceTintColor: Colors.transparent,
               margin: const EdgeInsets.only(bottom: 16),
-              elevation: 2,
+              elevation: 3,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -157,7 +159,7 @@ class SafetyScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(guide.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              Text(guide.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
                               const SizedBox(height: 2),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -183,16 +185,23 @@ class SafetyScreen extends ConsumerWidget {
                     const Divider(height: 20),
 
                     // DOs
-                    const Text('✓ काय करावे (DOs):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1B5E20))),
+                    Text(
+                      switch (lang) {
+                        'mr' => '✓ काय करावे (DOs):',
+                        'en' => '✓ What to Do (DOs):',
+                        _ => '✓ क्या करें (DOs):',
+                      },
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1B5E20)),
+                    ),
                     const SizedBox(height: 4),
                     ...guide.dos.map(
                       (d) => Padding(
-                        padding: const EdgeInsets.only(bottom: 3.0),
+                        padding: const EdgeInsets.only(bottom: 4.0),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1B5E20))),
-                            Expanded(child: Text(d, style: const TextStyle(fontSize: 12, height: 1.3))),
+                            Expanded(child: Text(d, style: const TextStyle(fontSize: 12, height: 1.35, color: Colors.black87))),
                           ],
                         ),
                       ),
@@ -200,16 +209,23 @@ class SafetyScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
 
                     // DONTs
-                    const Text('✗ काय टाळावे (DONTs):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
+                    Text(
+                      switch (lang) {
+                        'mr' => '✗ काय टाळावे (DONTs):',
+                        'en' => '✗ What NOT to Do (DONTs):',
+                        _ => '✗ क्या न करें (DONTs):',
+                      },
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red.shade800),
+                    ),
                     const SizedBox(height: 4),
                     ...guide.donts.map(
                       (d) => Padding(
-                        padding: const EdgeInsets.only(bottom: 3.0),
+                        padding: const EdgeInsets.only(bottom: 4.0),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                            Expanded(child: Text(d, style: const TextStyle(fontSize: 12, height: 1.3))),
+                            Text('✗ ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade800)),
+                            Expanded(child: Text(d, style: const TextStyle(fontSize: 12, height: 1.35, color: Colors.black87))),
                           ],
                         ),
                       ),

@@ -1,0 +1,27 @@
+{
+  "modelName": "YOLOv8n-Ewaste-Edge",
+  "architecture": "YOLOv8n-cls INT8/FP32",
+  "inputResolution": [
+    224,
+    224,
+    3
+  ],
+  "mean": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "std": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "quantization": "INT8 Quantized compatible",
+  "targetPlatform": "Android NNAPI & Pure Dart Edge CV Engine",
+  "sihProblemStatement": "PS 26229 - Ministry of Mines / JNARDDC",
+  "benchmarkedLatencyMs": {
+    "nnapi": 52.4,
+    "cpu": 108.6,
+    "dartEngine": 18.2
+  }
+}
