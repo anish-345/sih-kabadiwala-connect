@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,8 +32,20 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
 
     if (lot == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('लॉट विवरण')),
-        body: const Center(child: Text('लॉट डेटा नहीं मिला।')),
+        appBar: AppBar(
+          title: Text(switch (lang) {
+            'mr' => 'लॉट तपशील',
+            'en' => 'Lot Details',
+            _ => 'लॉट विवरण',
+          }),
+        ),
+        body: Center(
+          child: Text(switch (lang) {
+            'mr' => 'लॉट सापडला नाही.',
+            'en' => 'Lot record not found.',
+            _ => 'लॉट डेटा नहीं मिला।',
+          }),
+        ),
       );
     }
 
@@ -49,16 +62,22 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
     final finalValuation = lot.estValuationInr * selectedRecycler.priceMultiplier;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F8F4),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
           switch (lang) {
             'mr' => 'लॉट तपशील व रिसायकलर निवड',
             'en' => 'Lot Details & Recycler Match',
-            _ => 'लॉट विवरण व रिसाइक्लर मिलान',
+            _ => 'लॉट विवरण व रीसाइक्लर चयन',
           },
         ),
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: const Color(0xFFE2E8F0), height: 1.0),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -66,70 +85,80 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Lot Overview Card
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              lot.lotId,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green.shade900,
-                              ),
-                            ),
+              // Minimalist Lot Overview Card
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              lot.conditionGrade,
-                              style: TextStyle(fontSize: 11, color: Colors.grey.shade800),
+                          child: Text(
+                            lot.lotId,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF065F46),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '${lot.category}: ${lot.subCategory}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'प्रमाणित वजन: ${lot.estWeightKg.toStringAsFixed(1)} kg',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
-                          Text(
-                            'अनुमानित देय: ₹${finalValuation.toStringAsFixed(0)}',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                          child: Text(
+                            lot.conditionGrade,
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF475569), fontWeight: FontWeight.w500),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${lot.category}: ${lot.subCategory}',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          switch (lang) {
+                            'mr' => 'वजन: ${lot.estWeightKg.toStringAsFixed(1)} kg',
+                            'en' => 'Weight: ${lot.estWeightKg.toStringAsFixed(1)} kg',
+                            _ => 'वजन: ${lot.estWeightKg.toStringAsFixed(1)} कि.ग्रा.',
+                          },
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                        ),
+                        Text(
+                          '₹${finalValuation.toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // Ranked Recycler Matching Title
               Row(
@@ -137,21 +166,22 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                 children: [
                   Text(
                     switch (lang) {
-                      'mr' => 'अधिकृत रिसायकलर्स क्रमवारी (Ranked Matches):',
-                      'en' => 'Ranked Authorized Recyclers:',
-                      _ => 'अधिकृत रिसाइक्लर वरीयता क्रम (Ranked Matches):',
+                      'mr' => 'अधिकृत रिसायकलर्स (Ranked):',
+                      'en' => 'Authorized Recycler Match:',
+                      _ => 'अधिकृत रीसाइक्लर वरीयता क्रम:',
                     },
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
+                      color: const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
                     ),
-                    child: Text(
+                    child: const Text(
                       'CPCB Valid',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8)),
                     ),
                   ),
                 ],
@@ -161,47 +191,68 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
               // Recyclers List
               ...allRecyclers.map((r) => _buildRecyclerTile(r, lot, lang)),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
-              // Settlement Mode Choice Card
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        switch (lang) {
-                          'mr' => 'पैसे स्वीकारण्याची पद्धत (Settlement Mode):',
-                          'en' => 'Payment Mode at Gate:',
-                          _ => 'भुगतान प्राप्ति का माध्यम (Settlement Mode):',
-                        },
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSettlementOption(
-                        mode: 'CASH',
-                        title: 'तुरंत नकद (Spot Cash at Scale)',
-                        subtitle: 'तौल होते ही रिसाइक्लर वजन कांटा काउंटर पर नकद देगा।',
-                        icon: Icons.payments_outlined,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildSettlementOption(
-                        mode: 'UPI',
-                        title: 'यूपीआई / तुरंत बैंक खाता (UPI / IMPS)',
-                        subtitle: 'स्कैन होते ही बैंक खाते में ट्रांसफर।',
-                        icon: Icons.account_balance_outlined,
-                      ),
-                    ],
-                  ),
+              // Settlement Mode Choice Card (Clean Minimalist White)
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      switch (lang) {
+                        'mr' => 'पैसे स्वीकारण्याची पद्धत:',
+                        'en' => 'Payment Mode at Gate:',
+                        _ => 'भुगतान प्राप्ति का माध्यम:',
+                      },
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildSettlementOption(
+                      mode: 'CASH',
+                      title: switch (lang) {
+                        'mr' => 'काट्यावर थेट रोख रक्कम',
+                        'en' => 'Spot Cash at Scale Counter',
+                        _ => 'तुरंत नकद भुगतान',
+                      },
+                      subtitle: switch (lang) {
+                        'mr' => 'वजन होताच रिसायकलर काउंटरवर लगेच रोख पैसे देईल.',
+                        'en' => 'Instant cash at the weighbridge counter upon handover.',
+                        _ => 'तौल होते ही रीसाइक्लर वजन कांटा काउंटर पर नकद देगा।',
+                      },
+                      icon: Icons.payments_outlined,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildSettlementOption(
+                      mode: 'UPI',
+                      title: switch (lang) {
+                        'mr' => 'यूपीआय / थेट बँक खाते',
+                        'en' => 'UPI / Direct Bank Transfer',
+                        _ => 'यूपीआई / तुरंत बैंक खाता',
+                      },
+                      subtitle: switch (lang) {
+                        'mr' => 'स्कॅन पूर्ण होताच बँक खात्यात त्वरित ट्रान्सफर.',
+                        'en' => 'Direct transfer to linked bank account upon verification.',
+                        _ => 'स्कैन होते ही बैंक खाते में सीधे ट्रांसफर।',
+                      },
+                      icon: Icons.account_balance_outlined,
+                    ),
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Generate QR Button
-              FilledButton.icon(
+              FilledButton(
                 onPressed: () {
                   final now = DateTime.now().millisecondsSinceEpoch;
                   final txId = 'TX-PUN-2026-${const Uuid().v4().substring(0, 6).toUpperCase()}';
@@ -229,7 +280,7 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                     id: const Uuid().v4(),
                     entityType: 'TRANSACTION_RECORD',
                     entityId: txId,
-                    payloadJson: '',
+                    payloadJson: jsonEncode(tx.toMap()),
                     status: 'PENDING',
                     createdAt: now,
                   ));
@@ -237,19 +288,27 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                   // Navigate to QR Screen
                   context.push('/lot/${lot.lotId}/qr');
                 },
-                icon: const Icon(Icons.qr_code_2, size: 24),
-                label: Text(
-                  switch (lang) {
-                    'mr' => 'हस्तांतरण क्यूआर कोड तयार करा →',
-                    'en' => 'Generate Handover QR Code →',
-                    _ => 'हस्तांतरण क्यूआर कोड बनाएं →',
-                  },
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
+                  backgroundColor: const Color(0xFF059669),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.qr_code_2, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      switch (lang) {
+                        'mr' => 'हस्तांतरण क्यूआर कोड तयार करा →',
+                        'en' => 'Generate Handover QR Code →',
+                        _ => 'हस्तांतरण क्यूआर कोड बनाएं →',
+                      },
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -267,42 +326,48 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
     required IconData icon,
   }) {
     final isSelected = _settlementMode == mode;
-    return InkWell(
+    return GestureDetector(
       onTap: () => setState(() => _settlementMode = mode),
-      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.shade50 : Colors.white,
+          color: isSelected ? const Color(0xFFECFDF5) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade300,
-            width: isSelected ? 2.0 : 1.0,
+            color: isSelected ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.6 : 1.0,
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 20,
-              height: 20,
+              width: 18,
+              height: 18,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade400,
-                  width: isSelected ? 6.0 : 2.0,
+                  color: isSelected ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+                  width: isSelected ? 5.0 : 1.5,
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            Icon(icon, color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade700, size: 22),
+            Icon(icon, color: isSelected ? const Color(0xFF059669) : const Color(0xFF64748B), size: 22),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isSelected ? const Color(0xFF1B5E20) : Colors.black87)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: isSelected ? const Color(0xFF065F46) : const Color(0xFF0F172A),
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                  Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                 ],
               ),
             ),
@@ -314,34 +379,43 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
 
   Widget _buildRecyclerTile(RecyclerData r, MaterialsData lot, String lang) {
     final isSelected = _selectedRecyclerId == r.recyclerId;
-    final bonusText = r.priceMultiplier > 1.0 ? '+${((r.priceMultiplier - 1.0) * 100).round()}% बोनस' : 'मानक भाव';
+    final bonusText = r.priceMultiplier > 1.0
+        ? switch (lang) {
+            'mr' => '+${((r.priceMultiplier - 1.0) * 100).round()}% बोनस',
+            'en' => '+${((r.priceMultiplier - 1.0) * 100).round()}% Bonus',
+            _ => '+${((r.priceMultiplier - 1.0) * 100).round()}% बोनस',
+          }
+        : switch (lang) {
+            'mr' => 'मानक दर',
+            'en' => 'Standard Rate',
+            _ => 'मानक भाव',
+          };
 
-    return InkWell(
+    return GestureDetector(
       onTap: () => setState(() => _selectedRecyclerId = r.recyclerId),
-      borderRadius: BorderRadius.circular(14),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.shade50 : Colors.white,
+          color: isSelected ? const Color(0xFFECFDF5) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade300,
-            width: isSelected ? 2.0 : 1.0,
+            color: isSelected ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.6 : 1.0,
           ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 22,
-              height: 22,
+              width: 18,
+              height: 18,
               margin: const EdgeInsets.only(top: 2, right: 12),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF2E7D32) : Colors.grey.shade400,
-                  width: isSelected ? 6.5 : 2.0,
+                  color: isSelected ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+                  width: isSelected ? 5.0 : 1.5,
                 ),
               ),
             ),
@@ -356,55 +430,61 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                         child: Text(
                           r.legalEntityName,
                           style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? const Color(0xFF1B5E20) : Colors.black87,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected ? const Color(0xFF065F46) : const Color(0xFF0F172A),
                           ),
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade100,
+                          color: isSelected ? const Color(0xFFA7F3D0) : const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           bonusText,
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade900),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected ? const Color(0xFF065F46) : const Color(0xFF475569),
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'CPCB: ${r.cpcbRegNumber} • वैधता: ${r.validUntil}',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    'CPCB: ${r.cpcbRegNumber} • ${switch (lang) {
+                      'mr' => 'वैधता:',
+                      'en' => 'Valid until:',
+                      _ => 'वैधता:',
+                    }} ${r.validUntil}',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade600),
-                      Text(' ${r.distanceKm.toStringAsFixed(1)} किमी दूर • ${r.facilityAddress.split(',').first}',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+                      const Icon(Icons.location_on_outlined, size: 13, color: Color(0xFF64748B)),
+                      Text(
+                        ' ${r.distanceKm.toStringAsFixed(1)} ${switch (lang) {
+                          'mr' => 'किमी दूर',
+                          'en' => 'km away',
+                          _ => 'किमी दूर',
+                        }} • ${r.facilityAddress.split(',').first}',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
+                      ),
                       const Spacer(),
-                      const Icon(Icons.star, size: 14, color: Colors.amber),
-                      Text(' ${r.rating.toStringAsFixed(1)} (${r.totalHandovers}+ लॉट)',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      const Icon(Icons.star, size: 13, color: Color(0xFFF59E0B)),
+                      Text(
+                        ' ${r.rating.toStringAsFixed(1)} (${r.totalHandovers}+ ${switch (lang) {
+                          'mr' => 'लॉट',
+                          'en' => 'lots',
+                          _ => 'लॉट',
+                        }})',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    children: r.features.take(2).map((f) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(f, style: TextStyle(fontSize: 10, color: Colors.grey.shade800)),
-                      );
-                    }).toList(),
                   ),
                 ],
               ),

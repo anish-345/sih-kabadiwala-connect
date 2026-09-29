@@ -17,6 +17,9 @@ Future<void> main() async {
   // Open the real SQLite database (seeds prices & recyclers if first run)
   final db = await AppDatabase.create();
 
+  // Register observer to properly close database and stream controllers on app exit
+  WidgetsBinding.instance.addObserver(_AppLifecycleObserver(db));
+
   runApp(
     ProviderScope(
       overrides: [
@@ -25,4 +28,17 @@ Future<void> main() async {
       child: const KabadiwalaApp(),
     ),
   );
+}
+
+class _AppLifecycleObserver extends WidgetsBindingObserver {
+  final AppDatabase db;
+
+  _AppLifecycleObserver(this.db);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      db.close();
+    }
+  }
 }

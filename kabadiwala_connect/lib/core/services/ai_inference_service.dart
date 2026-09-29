@@ -256,7 +256,7 @@ class AiInferenceService {
 
     stopwatch.stop();
     final elapsed = stopwatch.elapsedMilliseconds;
-    final latency = elapsed.clamp(18, 56);
+    final latency = math.max(1, elapsed);
 
     return AiDetectionResult(
       category: matchedLabel.category,
@@ -313,16 +313,18 @@ class AiInferenceService {
     const procH = 128;
     final resized = img.copyResize(srcImage, width: procW, height: procH);
 
-    double sumR = 0.0;
-    double sumG = 0.0;
-    double sumB = 0.0;
     int copperCount = 0;
     int greenCount = 0;
     int blueCount = 0;
-    int redOverGreenCount = 0;
+    int glassCount = 0;
+    int centerTotalPx = 0;
 
     const totalPx = procW * procH;
     final lumMatrix = List.generate(procH, (_) => Float32List(procW));
+
+    // Focus on center 60% where scrap lot is positioned in viewfinder
+    const minCenter = 25;
+    const maxCenter = 103;
 
     for (int y = 0; y < procH; y++) {
       for (int x = 0; x < procW; x++) {
@@ -331,38 +333,44 @@ class AiInferenceService {
         final g = pixel.g.toDouble();
         final b = pixel.b.toDouble();
 
-        sumR += r;
-        sumG += g;
-        sumB += b;
-
         // Luminance for gradient energy
-        lumMatrix[y][x] = 0.299 * r + 0.587 * g + 0.114 * b;
+        final lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        lumMatrix[y][x] = lum;
 
-        if (r > 1.15 * g && g > 1.02 * b) copperCount++;
-        if (g > 1.15 * r && g > 1.10 * b) greenCount++;
-        if (b > 1.15 * r && b > 1.05 * g) blueCount++;
-        if (r > g) redOverGreenCount++;
+        if (x >= minCenter && x <= maxCenter && y >= minCenter && y <= maxCenter) {
+          centerTotalPx++;
+
+          // 1. Exposed copper conductor strands (orange-red metallic)
+          if (r > 1.12 * g && g > 1.02 * b && r > 65) {
+            copperCount++;
+          }
+          // 2. FR-4 Circuit Board Resin (distinctive PCB green)
+          if (g > 1.05 * r && g > 1.05 * b && g > 45) {
+            greenCount++;
+          }
+          // 3. Lithium-Ion Battery Packs (18650 blue cells / metallic foil)
+          if (b > 1.08 * r && b > 1.02 * g && b > 50) {
+            blueCount++;
+          }
+          // 4. CRT Funnel Glass (neutral dark lead-impregnated glass profile)
+          if (lum > 20 && lum < 90 && (r - b).abs() < 22 && (r - g).abs() < 22) {
+            glassCount++;
+          }
+        }
       }
     }
 
-    final meanR = sumR / totalPx;
-    final meanG = sumG / totalPx;
-    final meanB = sumB / totalPx;
+    final divisor = centerTotalPx > 0 ? centerTotalPx : totalPx;
+    final copperFrac = copperCount / divisor;
+    final greenFrac = greenCount / divisor;
+    final blueFrac = blueCount / divisor;
+    final glassFrac = glassCount / divisor;
 
-    final gDom = meanG / (meanR + meanB + 1.0);
-    final rDom = meanR / (meanG + meanB + 1.0);
-    final bDom = meanB / (meanR + meanG + 1.0);
-
-    final copperFrac = copperCount / totalPx;
-    final greenFrac = greenCount / totalPx;
-    final blueFrac = blueCount / totalPx;
-    final redGreaterGreen = redOverGreenCount / totalPx;
-
-    // Mathematical Neural Logit Activation
-    final zPcb = 8.0 * gDom + 12.0 * greenFrac - 4.0 * rDom;
-    final zCable = 10.0 * (rDom - bDom) + 12.0 * copperFrac - 5.0 * gDom;
-    final zBattery = 8.0 * (bDom - rDom) + 6.0 * redGreaterGreen - 10.0 * greenFrac;
-    final zCrt = 10.0 * (bDom - rDom) + 10.0 * blueFrac - 12.0 * redGreaterGreen - 10.0 * greenFrac;
+    // Mathematical Neural Logit Activations
+    final zPcb = 20.0 * greenFrac - 10.0 * copperFrac - 10.0 * blueFrac - 5.0 * glassFrac;
+    final zCable = 22.0 * copperFrac - 12.0 * greenFrac - 10.0 * blueFrac - 5.0 * glassFrac;
+    final zBattery = 24.0 * blueFrac - 10.0 * greenFrac - 8.0 * copperFrac - 5.0 * glassFrac;
+    final zCrt = 18.0 * glassFrac - 12.0 * copperFrac - 12.0 * blueFrac - 8.0 * greenFrac - 1.0;
 
     final logits = [zPcb, zCable, zBattery, zCrt];
     final maxLogit = logits.reduce(math.max);

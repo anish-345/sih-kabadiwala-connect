@@ -21,7 +21,7 @@ abstract final class AppRoutes {
 
   // Handover
   static const handoverScan    = '/handover/scan';
-  static const handoverConfirm = '/handover/:traceId';
+  static const handoverConfirm = '/handover/confirm/:traceId';
 
   // Recycler
   static const recyclerDash = '/recycler';

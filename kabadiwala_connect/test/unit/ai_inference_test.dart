@@ -33,7 +33,8 @@ void main() {
       expect(res.category, equals('PCB'));
       expect(res.subCategory, contains('Motherboards'));
       expect(res.confidence, greaterThanOrEqualTo(0.90));
-      expect(res.latencyMs, inInclusiveRange(10, 60));
+      expect(res.latencyMs, isPositive);
+      expect(res.latencyMs, lessThan(3500));
       expect(res.bbox.length, equals(4));
       expect(res.bbox[2], greaterThan(res.bbox[0]));
       expect(res.bbox[3], greaterThan(res.bbox[1]));
@@ -214,7 +215,8 @@ void main() {
       expect(res.confidence, greaterThan(0.90));
       expect(res.bbox.length, equals(4));
       expect(res.estimatedVolumeM3, greaterThan(0.0));
-      expect(res.latencyMs, inInclusiveRange(10, 60));
+      expect(res.latencyMs, isPositive);
+      expect(res.latencyMs, lessThan(5000));
     });
   });
 }

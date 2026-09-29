@@ -19,15 +19,66 @@ class PriceBoardScreen extends ConsumerStatefulWidget {
 class _PriceBoardScreenState extends ConsumerState<PriceBoardScreen> {
   String _selectedCategory = 'ALL';
 
-  final List<({String key, String label})> _categories = [
-    (key: 'ALL', label: 'सभी (All)'),
-    (key: 'PCB', label: 'मदरबोर्ड (PCB)'),
-    (key: 'Cables', label: 'केबल्स (Cables)'),
-    (key: 'Batteries', label: 'बैटरी (Batteries)'),
-    (key: 'Displays', label: 'डिस्प्ले (Displays)'),
-    (key: 'Motors', label: 'मोटर / कोर (Motors)'),
-    (key: 'Plastics', label: 'प्लास्टिक (Plastics)'),
-  ];
+  List<({String key, String label})> _getCategories(String lang) {
+    return [
+      (
+        key: 'ALL',
+        label: switch (lang) {
+          'mr' => 'सर्व',
+          'en' => 'All',
+          _ => 'सभी',
+        },
+      ),
+      (
+        key: 'PCB',
+        label: switch (lang) {
+          'mr' => 'मदरबोर्ड (PCB)',
+          'en' => 'Motherboard (PCB)',
+          _ => 'मदरबोर्ड (PCB)',
+        },
+      ),
+      (
+        key: 'Cables',
+        label: switch (lang) {
+          'mr' => 'केबल्स (Cables)',
+          'en' => 'Cables',
+          _ => 'केबल्स (Cables)',
+        },
+      ),
+      (
+        key: 'Batteries',
+        label: switch (lang) {
+          'mr' => 'बॅटरी (Batteries)',
+          'en' => 'Batteries',
+          _ => 'बैटरी (Batteries)',
+        },
+      ),
+      (
+        key: 'Displays',
+        label: switch (lang) {
+          'mr' => 'डिस्प्ले (Displays)',
+          'en' => 'Displays',
+          _ => 'डिस्प्ले (Displays)',
+        },
+      ),
+      (
+        key: 'Motors',
+        label: switch (lang) {
+          'mr' => 'मोटर्स / कोर (Motors)',
+          'en' => 'Motors & Cores',
+          _ => 'मोटर / कोर (Motors)',
+        },
+      ),
+      (
+        key: 'Plastics',
+        label: switch (lang) {
+          'mr' => 'प्लॅस्टिक (Plastics)',
+          'en' => 'Plastics',
+          _ => 'प्लास्टिक (Plastics)',
+        },
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,26 +86,33 @@ class _PriceBoardScreenState extends ConsumerState<PriceBoardScreen> {
     final user = ref.watch(appStateProvider);
     final voiceService = ref.watch(voiceServiceProvider);
     final lang = user.language;
+    final categories = _getCategories(lang);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F8F4),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header banner
+            // Minimalist Header banner
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
+                ),
+              ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade100,
+                      color: const Color(0xFFECFDF5),
                       borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
                     ),
-                    child: const Icon(Icons.analytics, color: Color(0xFF1B5E20), size: 24),
+                    child: const Icon(Icons.analytics_outlined, color: Color(0xFF059669), size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -63,22 +121,31 @@ class _PriceBoardScreenState extends ConsumerState<PriceBoardScreen> {
                       children: [
                         Text(
                           switch (lang) {
-                            'mr' => 'पुणे / पिंपरी-चिंचवड अधिकृत भाव',
+                            'mr' => 'पुणे आणि पिंपरी-चिंचवड अधिकृत दर',
                             'en' => 'Pune & PCMC Verified Recycler Rates',
-                            _ => 'पुणे / पिंपरी-चिंचवड अधिकृत गेट भाव',
+                            _ => 'पुणे और पिंपरी-चिंचवड अधिकृत गेट भाव',
                           },
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
-                        Text(
+                        const SizedBox(height: 2),
+                        const Text(
                           'CPCB EPR Rules 2022 • JNARDDC Benchmark',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                          style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.volume_up, color: Color(0xFF2E7D32), size: 26),
-                    tooltip: 'भाव बोलकर सुनें (Listen All)',
+                    icon: const Icon(Icons.volume_up_outlined, color: Color(0xFF059669), size: 24),
+                    tooltip: switch (lang) {
+                      'mr' => 'दर ऐका',
+                      'en' => 'Listen to Rates',
+                      _ => 'भाव बोलकर सुनें',
+                    },
                     onPressed: () {
                       final all = db.getAllPrices();
                       if (all.isNotEmpty) {
@@ -90,37 +157,45 @@ class _PriceBoardScreenState extends ConsumerState<PriceBoardScreen> {
               ),
             ),
 
-            // Category filter chips
+            // Minimalist Category filter chips
             Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              height: 52,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               color: Colors.white,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _categories.length,
+                itemCount: categories.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
-                  final cat = _categories[index];
+                  final cat = categories[index];
                   final isSelected = _selectedCategory == cat.key;
-                  return ChoiceChip(
-                    label: Text(cat.label),
-                    selected: isSelected,
-                    selectedColor: const Color(0xFF2E7D32),
-                    backgroundColor: Colors.grey.shade100,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      fontSize: 12,
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedCategory = cat.key),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF059669) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Text(
+                        cat.label,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : const Color(0xFF475569),
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
-                    onSelected: (selected) {
-                      if (selected) setState(() => _selectedCategory = cat.key);
-                    },
                   );
                 },
               ),
             ),
-            const Divider(height: 1, thickness: 1),
+            Container(height: 1, color: const Color(0xFFE2E8F0)),
 
             // Live Prices Stream from SQLite
             Expanded(
@@ -144,12 +219,13 @@ class _PriceBoardScreenState extends ConsumerState<PriceBoardScreen> {
                           'en' => 'No rates found for this category',
                           _ => 'इस श्रेणी के लिए कोई भाव उपलब्ध नहीं हैं',
                         },
+                        style: const TextStyle(color: Color(0xFF64748B)),
                       ),
                     );
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final item = filtered[index];
@@ -172,236 +248,307 @@ class _PriceBoardScreenState extends ConsumerState<PriceBoardScreen> {
 
     final isUp = item.trend == 'UP';
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Row: Category + Sub-category + Spoken Rate Icon
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.green.shade300),
-                        ),
-                        child: Text(
-                          item.category,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade900,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.subCategory,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.volume_up, color: Color(0xFF2E7D32), size: 24),
-                  tooltip: 'बोलकर सुनें (Listen Rate)',
-                  onPressed: () => voiceService.speakPrice(item, lang),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Price Row
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Column(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x04000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Row: Category badge + Sub-category name + Audio listen
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      switch (lang) {
-                        'mr' => 'निव्वळ अधिकृत भाव (Net Offered):',
-                        'en' => 'Net Formal Price:',
-                        _ => 'कुल देय सरकारी भाव:',
-                      },
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                      ),
+                      child: Text(
+                        item.category,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF065F46),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(
-                          '₹${item.netOfferedPrice.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1B5E20),
-                          ),
-                        ),
-                        const Text(
-                          ' / किलो (kg)',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black54),
-                        ),
-                      ],
+                    const SizedBox(height: 6),
+                    Text(
+                      item.subCategory,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
                   ],
                 ),
-                const Spacer(),
-                // Surplus badge
-                if (surplusPercent > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade700,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '+$surplusPercent% अतिरिक्त',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Rate Breakdown Pills
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildMiniBreakdown('गेट भाव', '₹${item.formalGateRate.toStringAsFixed(0)}'),
-                  const Text('+', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                  _buildMiniBreakdown('EPR बोनस', '+₹${item.eprCreditShare.toStringAsFixed(0)}'),
-                  const Text('+', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                  _buildMiniBreakdown('NCMM खनिज', '+₹${item.ncmmIncentive.toStringAsFixed(0)}'),
-                  const Text('vs', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                  _buildMiniBreakdown('लोकल दलाल', '₹${item.informalBaseRate.toStringAsFixed(0)}', isOld: true),
-                ],
+              IconButton(
+                icon: const Icon(Icons.volume_up_outlined, color: Color(0xFF059669), size: 22),
+                tooltip: switch (lang) {
+                  'mr' => 'दर ऐका',
+                  'en' => 'Listen Rate',
+                  _ => 'भाव बोलकर सुनें',
+                },
+                onPressed: () => voiceService.speakPrice(item, lang),
               ),
-            ),
-            const SizedBox(height: 12),
+            ],
+          ),
+          const SizedBox(height: 12),
 
-            // 7-day mini trend sparkline
-            if (item.trendHistory.isNotEmpty)
-              Row(
+          // Price Row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 36,
-                      child: LineChart(
-                        LineChartData(
-                          gridData: const FlGridData(show: false),
-                          titlesData: const FlTitlesData(show: false),
-                          borderData: FlBorderData(show: false),
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: item.trendHistory
-                                  .asMap()
-                                  .entries
-                                  .map((e) => FlSpot(e.key.toDouble(), e.value))
-                                  .toList(),
-                              isCurved: true,
-                              color: isUp ? Colors.green.shade700 : Colors.red.shade700,
-                              barWidth: 2.5,
-                              isStrokeCapRound: true,
-                              dotData: const FlDotData(show: false),
-                              belowBarData: BarAreaData(
-                                show: true,
-                                color: (isUp ? Colors.green : Colors.red).withValues(alpha: 0.12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  Text(
+                    switch (lang) {
+                      'mr' => 'एकूण अधिकृत दर:',
+                      'en' => 'Net Formal Price:',
+                      _ => 'कुल देय सरकारी भाव:',
+                    },
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(height: 2),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Icon(
-                        isUp ? Icons.trending_up : Icons.trending_down,
-                        color: isUp ? Colors.green.shade700 : Colors.red.shade700,
-                        size: 18,
+                      Text(
+                        '₹${item.netOfferedPrice.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: -0.5,
+                        ),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${item.trendDeltaPercent >= 0 ? '+' : ''}${item.trendDeltaPercent}% (७ दिन)',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: isUp ? Colors.green.shade800 : Colors.red.shade800,
-                        ),
+                        switch (lang) {
+                          'mr' => '/ किलो',
+                          'en' => '/ kg',
+                          _ => '/ कि.ग्रा.',
+                        },
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
                       ),
                     ],
                   ),
                 ],
               ),
-            const SizedBox(height: 12),
+              const Spacer(),
+              // Surplus badge
+              if (surplusPercent > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: Text(
+                    switch (lang) {
+                      'mr' => '+$surplusPercent% जादा',
+                      'en' => '+$surplusPercent% More',
+                      _ => '+$surplusPercent% अतिरिक्त',
+                    },
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF065F46),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
 
-            // Bottom Action: Sell this material
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.tonalIcon(
-                onPressed: () => context.go(AppRoutes.scanner),
-                icon: const Icon(Icons.add_shopping_cart, size: 18),
-                label: Text(
-                  switch (lang) {
-                    'mr' => 'हा माल विका (Create Lot) →',
-                    'en' => 'Sell This Material (Create Lot) →',
-                    _ => 'इस भाव पर माल बेचें (लॉट बनाएं) →',
+          // Rate Breakdown Pills (Minimalist subtle slate container)
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMiniBreakdown(
+                  label: switch (lang) {
+                    'mr' => 'गेट दर',
+                    'en' => 'Gate Rate',
+                    _ => 'गेट भाव',
                   },
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  value: '₹${item.formalGateRate.toStringAsFixed(0)}',
                 ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.green.shade100,
-                  foregroundColor: const Color(0xFF1B5E20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                const Text('+', style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                _buildMiniBreakdown(
+                  label: switch (lang) {
+                    'mr' => 'EPR बोनस',
+                    'en' => 'EPR Credit',
+                    _ => 'EPR बोनस',
+                  },
+                  value: '+₹${item.eprCreditShare.toStringAsFixed(0)}',
                 ),
+                const Text('+', style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                _buildMiniBreakdown(
+                  label: switch (lang) {
+                    'mr' => 'NCMM खनिज',
+                    'en' => 'NCMM Bonus',
+                    _ => 'NCMM खनिज',
+                  },
+                  value: '+₹${item.ncmmIncentive.toStringAsFixed(0)}',
+                ),
+                const Text('vs', style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                _buildMiniBreakdown(
+                  label: switch (lang) {
+                    'mr' => 'स्थानिक दलाल',
+                    'en' => 'Middleman',
+                    _ => 'लोकल दलाल',
+                  },
+                  value: '₹${item.informalBaseRate.toStringAsFixed(0)}',
+                  isOld: true,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 7-day mini trend sparkline
+          if (item.trendHistory.isNotEmpty)
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 32,
+                    child: LineChart(
+                      LineChartData(
+                        gridData: const FlGridData(show: false),
+                        titlesData: const FlTitlesData(show: false),
+                        borderData: FlBorderData(show: false),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: item.trendHistory
+                                .asMap()
+                                .entries
+                                .map((e) => FlSpot(e.key.toDouble(), e.value))
+                                .toList(),
+                            isCurved: true,
+                            color: isUp ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                            barWidth: 2.2,
+                            isStrokeCapRound: true,
+                            dotData: const FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: (isUp ? const Color(0xFF059669) : const Color(0xFFDC2626)).withValues(alpha: 0.08),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Row(
+                  children: [
+                    Icon(
+                      isUp ? Icons.trending_up : Icons.trending_down,
+                      color: isUp ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${item.trendDeltaPercent >= 0 ? '+' : ''}${item.trendDeltaPercent}% ${switch (lang) {
+                        'mr' => '(७ दिवस)',
+                        'en' => '(7 days)',
+                        _ => '(७ दिन)',
+                      }}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isUp ? const Color(0xFF065F46) : const Color(0xFFB91C1C),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          const SizedBox(height: 12),
+
+          // Minimalist Bottom Action: Sell this material
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => context.go(AppRoutes.scanner),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                minimumSize: const Size(0, 44),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_shopping_cart, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    switch (lang) {
+                      'mr' => 'हा माल विका (लॉट तयार करा) →',
+                      'en' => 'Sell Material (Create Lot) →',
+                      _ => 'माल बेचें (लॉट बनाएं) →',
+                    },
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMiniBreakdown(String label, String value, {bool isOld = false}) {
+  Widget _buildMiniBreakdown({required String label, required String value, bool isOld = false}) {
     return Column(
       children: [
         Text(
           label,
           style: TextStyle(
             fontSize: 10,
-            color: isOld ? Colors.red.shade700 : Colors.grey.shade700,
-            fontWeight: isOld ? FontWeight.bold : FontWeight.normal,
+            color: isOld ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+            fontWeight: isOld ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 1),
+        const SizedBox(height: 2),
         Text(
           value,
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: isOld ? Colors.red.shade900 : Colors.black87,
+            fontWeight: FontWeight.w700,
+            color: isOld ? const Color(0xFF991B1B) : const Color(0xFF0F172A),
           ),
         ),
       ],
