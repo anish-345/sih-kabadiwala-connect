@@ -7,7 +7,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
-
+import '../constants/app_config.dart';
 import 'ai_engine.dart';
 
 class PlatformAiEngine implements AiEngine {
@@ -130,8 +130,9 @@ class PlatformAiEngine implements AiEngine {
     final candidates = _workingCloudUrl != null
         ? [_workingCloudUrl!]
         : [
-            'http://192.168.1.73:5000/api/ai/classify',
+            AppConfig.aiClassifyUrl,
             'http://10.0.2.2:5000/api/ai/classify',
+            'http://192.168.1.73:5000/api/ai/classify',
             'http://localhost:5000/api/ai/classify',
           ];
 

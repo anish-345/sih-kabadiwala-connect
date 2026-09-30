@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../constants/app_config.dart';
 import '../storage/database.dart';
 
 class SyncResult {
@@ -19,9 +20,10 @@ class SyncResult {
 }
 
 class BackendSyncService {
-  static const List<String> _candidateBaseUrls = [
-    'http://192.168.1.73:5000/api', // Host machine on local Wi-Fi for physical phones
+  static final List<String> _candidateBaseUrls = [
+    AppConfig.apiBaseUrl,
     'http://10.0.2.2:5000/api',      // Android Emulator host loopback
+    'http://192.168.1.73:5000/api', // Host machine on local Wi-Fi for physical phones
     'http://localhost:5000/api',     // Localhost / Web / Desktop
     'http://127.0.0.1:5000/api',
   ];

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-
+import '../constants/app_config.dart';
 import 'ai_engine.dart';
 
 class WebAiEngine implements AiEngine {
@@ -44,6 +44,7 @@ class WebAiEngine implements AiEngine {
     // Determine candidate backend endpoints for Fireworks AI classification
     final candidates = [
       '/api/ai/classify',
+      AppConfig.aiClassifyUrl,
       'http://localhost:5000/api/ai/classify',
       'http://192.168.1.73:5000/api/ai/classify',
     ];
