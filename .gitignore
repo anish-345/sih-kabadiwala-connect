@@ -47,3 +47,5 @@ node_modules/
 .env
 **/.env
 .vercel
+
+.vercel

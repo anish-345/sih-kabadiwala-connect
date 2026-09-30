@@ -1,0 +1,8 @@
+kabadiwala_connect/build/app
+kabadiwala_connect/build/outputs
+kabadiwala_connect/.dart_tool
+node_modules
+.git
+.github
+*.apk
+*.log
