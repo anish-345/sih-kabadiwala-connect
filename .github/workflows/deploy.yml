@@ -24,8 +24,9 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Backend Dependencies
+      - name: Install Root & Backend Dependencies
         run: |
+          npm install
           cd backend
           npm install
 
@@ -57,16 +58,31 @@ jobs:
           name: kabadiwala-connect-web
           path: kabadiwala_connect/build/web
 
-      - name: Deploy to Vercel
+      - name: Deploy Prebuilt Application to Vercel
         id: vercel_deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
         run: |
           mkdir -p .vercel
           echo "{\"projectId\":\"$VERCEL_PROJECT_ID\",\"orgId\":\"$VERCEL_ORG_ID\"}" > .vercel/project.json
-          DEPLOY_URL=$(npx -y vercel@latest deploy --prod --token=$VERCEL_TOKEN --yes)
+          
+          # Pull environment variables from Vercel
+          npx -y vercel@latest pull --yes --environment=production --token=$VERCEL_TOKEN
+          
+          # Build Vercel deployment package locally on GitHub Runner
+          npx -y vercel@latest build --prod --token=$VERCEL_TOKEN
+          
+          # Deploy prebuilt output directly to Vercel Edge
+          RAW_OUTPUT=$(npx -y vercel@latest deploy --prebuilt --prod --token=$VERCEL_TOKEN)
+          DEPLOY_URL=$(echo "$RAW_OUTPUT" | grep -o 'https://[^ ]*' | tail -n 1)
+          
+          if [ -z "$DEPLOY_URL" ]; then
+            DEPLOY_URL="$RAW_OUTPUT"
+          fi
+          
           echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
           echo "preview-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
           echo "=================================================="
