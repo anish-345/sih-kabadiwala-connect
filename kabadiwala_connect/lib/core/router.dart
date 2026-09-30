@@ -18,9 +18,14 @@ import '../features/recycler_dash/presentation/screens/recycler_dashboard_screen
 import 'constants/app_routes.dart';
 import 'widgets/home_shell.dart';
 
+import 'providers/app_state.dart';
+
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  final hasCompleted = prefs?.getBool('onboarding_completed') ?? false;
+
   return GoRouter(
-    initialLocation: AppRoutes.language,
+    initialLocation: hasCompleted ? AppRoutes.scanner : AppRoutes.language,
     debugLogDiagnostics: false,
     routes: [
       // ── Onboarding ───────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/constants/app_theme.dart';
 import '../../../../core/providers/app_state.dart';
 import '../../../../core/storage/database.dart';
 import '../../../../core/storage/models.dart';
@@ -60,9 +61,9 @@ class _HandoverScanScreenState extends ConsumerState<HandoverScanScreen> {
         _isProcessing = false;
         _errorMessage = verification.error ??
             switch (lang) {
-              'mr' => 'अवैध डिजिटल क्यूआर स्वाक्षरी (Invalid Cryptographic Token)',
-              'en' => 'Invalid Cryptographic QR Token Signature',
-              _ => 'अमान्य डिजिटल क्यूआर हस्ताक्षर (Invalid Cryptographic Token)',
+              'mr' => 'अवैध डिजिटल क्यूआर स्वाक्षरी',
+              'en' => 'Invalid QR Token Signature',
+              _ => 'अमान्य डिजिटल क्यूआर हस्ताक्षर',
             };
       });
       return;
@@ -72,9 +73,9 @@ class _HandoverScanScreenState extends ConsumerState<HandoverScanScreen> {
     final lotId = data['lot_id'] as String;
     final txId = data['tx_id'] as String;
     final now = DateTime.now().millisecondsSinceEpoch;
-    final traceId = 'TRACE-2026-${const Uuid().v4().substring(0, 6).toUpperCase()}';
+    final traceId =
+        'TRACE-2026-${const Uuid().v4().substring(0, 6).toUpperCase()}';
 
-    // Insert pending traceability record
     db.insertTraceability(TraceabilityData(
       traceId: traceId,
       lotId: lotId,
@@ -88,7 +89,6 @@ class _HandoverScanScreenState extends ConsumerState<HandoverScanScreen> {
       createdAt: now,
     ));
 
-    // Navigate to Recycler Confirm Screen
     context.pushReplacement('/handover/confirm/$traceId');
   }
 
@@ -102,39 +102,54 @@ class _HandoverScanScreenState extends ConsumerState<HandoverScanScreen> {
       appBar: AppBar(
         title: Text(
           switch (lang) {
-            'mr' => 'रिसायकलर क्यूआर स्कॅनर',
-            'en' => 'Recycler QR Scanner',
-            _ => 'रीसाइक्लर क्यूआर स्कैनर',
+            'mr' => 'क्यूआर स्कॅनर',
+            'en' => 'QR Scanner',
+            _ => 'क्यूआर स्कैनर',
           },
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.ink,
         elevation: 0,
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.line),
+        ),
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Error banner if any
+            // Error banner
             if (_errorMessage != null)
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: const Color(0xFFDC2626),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                color: AppColors.danger,
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.white),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.error_outline,
+                        color: Colors.white, size: 20),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600),
                       ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close,
+                          color: Colors.white, size: 18),
+                      onPressed: () =>
+                          setState(() => _errorMessage = null),
                     ),
                   ],
                 ),
               ),
 
-            // Live Camera Scanner
+            // Camera scanner
             Expanded(
               child: Stack(
                 alignment: Alignment.center,
@@ -152,14 +167,23 @@ class _HandoverScanScreenState extends ConsumerState<HandoverScanScreen> {
                       }
                     },
                   ),
-                  // Reticle overlay
+                  // Scan reticle
                   Container(
-                    width: 250,
-                    height: 250,
+                    width: 240,
+                    height: 240,
                     decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFF10B981), width: 2.5),
-                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: AppColors.accent.withValues(alpha: 0.8),
+                          width: 2),
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.lg),
                     ),
+                  ),
+                  // Corner accents
+                  SizedBox(
+                    width: 240,
+                    height: 240,
+                    child: CustomPaint(painter: _ReticlePainter()),
                   ),
                   if (_isProcessing)
                     Container(
@@ -168,15 +192,20 @@ class _HandoverScanScreenState extends ConsumerState<HandoverScanScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const CircularProgressIndicator(color: Color(0xFF10B981)),
-                            const SizedBox(height: 12),
+                            const CircularProgressIndicator(
+                                color: AppColors.accent,
+                                strokeWidth: 2.5),
+                            const SizedBox(height: AppSpacing.md),
                             Text(
                               switch (lang) {
-                                'mr' => 'डिजिटल टोकन पडताळणी सुरू आहे...',
-                                'en' => 'Verifying cryptographic token...',
-                                _ => 'क्रिप्टोग्राफिक टोकन सत्यापित हो रहा है...',
+                                'mr' => 'टोकन पडताळणी...',
+                                'en' => 'Verifying token...',
+                                _ => 'टोकन सत्यापन...',
                               },
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14),
                             ),
                           ],
                         ),
@@ -186,62 +215,79 @@ class _HandoverScanScreenState extends ConsumerState<HandoverScanScreen> {
               ),
             ),
 
-            // Bottom manual test action panel
+            // Bottom panel
             Container(
-              color: const Color(0xFF0F172A),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    switch (lang) {
-                      'mr' => 'कलेक्टरच्या फोनमधील क्यूआर कोड स्कॅनरसमोर धरा',
-                      'en' => 'Align collector\'s QR code within the frame',
-                      _ => 'कलेक्टर के फोन का डिजिटल क्यूआर स्क्रीन के सामने रखें',
-                    },
-                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                  ),
-                  const SizedBox(height: 12),
-                  // Quick test button using latest quoted transaction in DB
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      final db = ref.read(databaseProvider);
-                      final allLots = db.getAllMaterials();
-                      if (allLots.isNotEmpty) {
-                        final latestLot = allLots.first;
-                        final latestTx = db.getTransactionByLotId(latestLot.lotId);
-                        if (latestTx != null) {
-                          final payload = QrSigner.buildPayload(
-                            txId: latestTx.txId,
-                            lotId: latestLot.lotId,
-                            collectorId: latestLot.collectorId,
-                            lat: latestLot.lat ?? user.lat,
-                            lon: latestLot.lon ?? user.lon,
-                            category: latestLot.category,
-                            subCategory: latestLot.subCategory,
-                            estWeightKg: latestLot.estWeightKg,
-                            quotedValueInr: latestTx.quotedValueInr,
-                            netOfferedPriceInr: latestTx.finalSettledInr,
-                          );
-                          final blob = QrSigner.sign(payload);
-                          _verifyAndProceed(blob);
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.flash_on, color: Color(0xFFFBBF24)),
-                    label: Text(
+              color: AppColors.ink,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
                       switch (lang) {
-                        'mr' => 'त्वरित चाचणी: नवीनतम लॉट पडताळा',
-                        'en' => 'Quick Test: Verify Latest Lot',
-                        _ => 'त्वरित परीक्षण: नवीनतम लॉट सत्यापित करें',
+                        'mr' =>
+                          'कलेक्टरचा क्यूआर कोड फ्रेममध्ये ठेवा',
+                        'en' =>
+                          'Align collector\'s QR code in the frame',
+                        _ =>
+                          'कलेक्टर का क्यूआर कोड फ्रेम में रखें',
                       },
-                      style: const TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: AppColors.subtle, fontSize: 13),
+                      textAlign: TextAlign.center,
                     ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFFBBF24)),
+                    const SizedBox(height: AppSpacing.md),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        final db = ref.read(databaseProvider);
+                        final allLots = db.getAllMaterials();
+                        if (allLots.isNotEmpty) {
+                          final latestLot = allLots.first;
+                          final latestTx = db
+                              .getTransactionByLotId(latestLot.lotId);
+                          if (latestTx != null) {
+                            final payload = QrSigner.buildPayload(
+                              txId: latestTx.txId,
+                              lotId: latestLot.lotId,
+                              collectorId: latestLot.collectorId,
+                              lat: latestLot.lat ?? user.lat,
+                              lon: latestLot.lon ?? user.lon,
+                              category: latestLot.category,
+                              subCategory: latestLot.subCategory,
+                              estWeightKg: latestLot.estWeightKg,
+                              quotedValueInr: latestTx.quotedValueInr,
+                              netOfferedPriceInr:
+                                  latestTx.finalSettledInr,
+                            );
+                            final blob = QrSigner.sign(payload);
+                            _verifyAndProceed(blob);
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.flash_on,
+                          color: AppColors.warn, size: 18),
+                      label: Text(
+                        switch (lang) {
+                          'mr' => 'त्वरित चाचणी',
+                          'en' => 'Quick Test',
+                          _ => 'त्वरित परीक्षण',
+                        },
+                        style: const TextStyle(
+                            color: AppColors.warn,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.warn),
+                        minimumSize: const Size(double.infinity, 44),
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.md)),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -249,4 +295,35 @@ class _HandoverScanScreenState extends ConsumerState<HandoverScanScreen> {
       ),
     );
   }
+}
+
+class _ReticlePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.accent
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round;
+
+    const c = 24.0;
+    final w = size.width;
+    final h = size.height;
+
+    // Top-left
+    canvas.drawLine(Offset.zero, Offset(c, 0), paint);
+    canvas.drawLine(Offset.zero, Offset(0, c), paint);
+    // Top-right
+    canvas.drawLine(Offset(w, 0), Offset(w - c, 0), paint);
+    canvas.drawLine(Offset(w, 0), Offset(w, c), paint);
+    // Bottom-left
+    canvas.drawLine(Offset(0, h), Offset(c, h), paint);
+    canvas.drawLine(Offset(0, h), Offset(0, h - c), paint);
+    // Bottom-right
+    canvas.drawLine(Offset(w, h), Offset(w - c, h), paint);
+    canvas.drawLine(Offset(w, h), Offset(w, h - c), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

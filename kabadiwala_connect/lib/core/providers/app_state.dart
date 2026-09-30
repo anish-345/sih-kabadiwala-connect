@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+final sharedPreferencesProvider = Provider<SharedPreferences?>((ref) => null);
 
 class UserProfile {
   final String id;
@@ -67,18 +70,21 @@ class UserProfile {
 }
 
 class AppStateNotifier extends StateNotifier<UserProfile> {
-  AppStateNotifier()
-      : super(const UserProfile(
-          id: 'COLL-PUN-0042',
-          name: 'रमेश शिंदे (Ramesh Shinde)',
-          phone: '+91 98221 44021',
-          role: 'collector',
-          region: 'नाना पेठ (Nana Peth, Pune)',
-          language: 'hi',
+  final SharedPreferences? _prefs;
+
+  AppStateNotifier([this._prefs])
+      : super(UserProfile(
+          id: _prefs?.getString('user_id') ?? 'COLL-PUN-0042',
+          name: _prefs?.getString('user_name') ?? 'रमेश शिंदे (Ramesh Shinde)',
+          phone: _prefs?.getString('user_phone') ?? '+91 98221 44021',
+          role: _prefs?.getString('user_role') ?? 'collector',
+          region: _prefs?.getString('user_region') ?? 'नाना पेठ (Nana Peth, Pune)',
+          language: _prefs?.getString('app_language') ?? 'hi',
         ));
 
   void setLanguage(String lang) {
     state = state.copyWith(language: lang);
+    _prefs?.setString('app_language', lang);
   }
 
   void setRole(String role) {
@@ -97,13 +103,19 @@ class AppStateNotifier extends StateNotifier<UserProfile> {
         role: 'collector',
       );
     }
+    _prefs?.setString('user_role', state.role);
+    _prefs?.setString('user_id', state.id);
+    _prefs?.setString('user_name', state.name);
+    _prefs?.setString('user_phone', state.phone);
   }
 
   void setPhone(String phone) {
     state = state.copyWith(phone: phone);
+    _prefs?.setString('user_phone', phone);
   }
 }
 
 final appStateProvider = StateNotifierProvider<AppStateNotifier, UserProfile>((ref) {
-  return AppStateNotifier();
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return AppStateNotifier(prefs);
 });

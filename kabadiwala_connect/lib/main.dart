@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'app.dart';
+import 'core/providers/app_state.dart';
 import 'core/storage/database.dart';
 
 Future<void> main() async {
@@ -17,6 +20,9 @@ Future<void> main() async {
   // Open the real SQLite database (seeds prices & recyclers if first run)
   final db = await AppDatabase.create();
 
+  // Initialize shared preferences for persistent language & user settings
+  final prefs = await SharedPreferences.getInstance();
+
   // Register observer to properly close database and stream controllers on app exit
   WidgetsBinding.instance.addObserver(_AppLifecycleObserver(db));
 
@@ -24,6 +30,7 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(db),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: const KabadiwalaApp(),
     ),

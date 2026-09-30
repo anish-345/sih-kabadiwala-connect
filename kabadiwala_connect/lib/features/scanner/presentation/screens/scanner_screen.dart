@@ -7,11 +7,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/constants/app_theme.dart';
 import '../../../../core/providers/app_state.dart';
 import '../../../../core/services/ai_inference_service.dart';
 import '../../../../core/storage/database.dart';
 import '../../../../core/storage/models.dart';
 import '../../../../core/utils/density_fraud_detector.dart';
+import '../../../../core/widgets/app_surface.dart';
 
 class ScannerScreen extends ConsumerStatefulWidget {
   const ScannerScreen({super.key});
@@ -93,22 +95,34 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   final List<({String name, String assetImg})> _gizFieldSamples = [
     (
-      name: 'GIZ Field #1 (Mixed Waste)',
+      name: 'GIZ Field #1',
       assetImg: 'assets/images/test_samples/IMG_20250522_115902_928.jpg',
     ),
     (
-      name: 'GIZ Field #2 (Electronic Lot)',
+      name: 'GIZ Field #2',
       assetImg: 'assets/images/test_samples/IMG_20250522_115909_024.jpg',
     ),
     (
-      name: 'GIZ Field #3 (Scrap Pile)',
+      name: 'GIZ Field #3',
       assetImg: 'assets/images/test_samples/IMG_20250522_121901_241.jpg',
     ),
     (
-      name: 'GIZ Field #4 (Disassembly)',
+      name: 'GIZ Field #4',
       assetImg: 'assets/images/test_samples/IMG_20250522_125712_264.jpg',
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _selectBenchmarkSample(
+        'assets/images/benchmark/motherboard_sample.jpg',
+        'Mid Grade (Motherboards / GPUs)',
+        20.0,
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -118,8 +132,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   Future<void> _takePhoto(ImageSource source) async {
     try {
-      final picked =
-          await _picker.pickImage(source: source, maxWidth: 1024, maxHeight: 1024);
+      final picked = await _picker.pickImage(
+          source: source, maxWidth: 1024, maxHeight: 1024);
       if (picked != null) {
         setState(() {
           _capturedImagePath = picked.path;
@@ -132,7 +146,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     }
   }
 
-  Future<void> _selectBenchmarkSample(String assetPath, String defaultSubCat, double defaultKg) async {
+  Future<void> _selectBenchmarkSample(
+      String assetPath, String defaultSubCat, double defaultKg) async {
     setState(() {
       _benchmarkAssetPath = assetPath;
       _capturedImagePath = null;
@@ -151,10 +166,23 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       weightKg: weight,
     );
 
+    final db = ref.read(databaseProvider);
+    final allPrices = db.getAllPrices();
+    String safeSubCategory = result.subCategory;
+    String safeCategory = result.category;
+    if (allPrices.isNotEmpty && !allPrices.any((p) => p.subCategory == safeSubCategory)) {
+      final match = allPrices.firstWhere(
+        (p) => p.category.toLowerCase() == safeCategory.toLowerCase(),
+        orElse: () => allPrices.first,
+      );
+      safeSubCategory = match.subCategory;
+      safeCategory = match.category;
+    }
+
     setState(() {
       _aiResult = result;
-      _selectedCategory = result.category;
-      _selectedSubCategory = result.subCategory;
+      _selectedCategory = safeCategory;
+      _selectedSubCategory = safeSubCategory;
       _fraudResult = result.fraudResult;
       _isAnalyzing = false;
     });
@@ -180,9 +208,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       subCategory: subCatKey,
     );
 
-    setState(() {
-      _fraudResult = res;
-    });
+    setState(() => _fraudResult = res);
   }
 
   @override
@@ -203,369 +229,284 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     final presets = _getScrapPresets();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Minimalist Photo / Camera Box with AI Bounding Box HUD
-              Container(
-                height: 220,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x04000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: _buildImageOrCaptureArea(lang),
+      backgroundColor: AppColors.bg,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.sm, AppSpacing.md, 48),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Zone 1: Image Capture ──────────────────────────────
+            Container(
+              height: 220,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: AppColors.line),
               ),
-              const SizedBox(height: 12),
+              child: _buildImageOrCaptureArea(lang),
+            ),
+            const SizedBox(height: AppSpacing.md),
 
-              // AI Inference HUD Card
-              if (_aiResult != null) _buildAiInferenceHud(lang),
+            // AI Result Card
+            if (_aiResult != null)
+              AppFadeIn(child: _buildAiResultCard(lang)),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
 
-              // Scrap Sample Quick Selector (SIH Benchmarks)
-              Text(
-                switch (lang) {
-                  'mr' => 'नमुना ई-कचरा निवडा:',
-                  'en' => 'Benchmark E-Waste Samples:',
-                  _ => 'त्वरित ई-कचरा नमुना चुनें:',
-                },
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 44,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: presets.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
+            // ── Quick Samples ─────────────────────────────────────
+            AppSectionLabel(
+              switch (lang) {
+                'mr' => 'नमुने निवडा',
+                'en' => 'Quick Samples',
+                _ => 'नमूने चुनें',
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: presets.length + _gizFieldSamples.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: AppSpacing.sm),
+                itemBuilder: (context, index) {
+                  if (index < presets.length) {
                     final p = presets[index];
-                    final isSelected = _benchmarkAssetPath == p.assetImg ||
+                    final isActive = _benchmarkAssetPath == p.assetImg ||
                         _selectedSubCategory == p.subCat;
-                    return GestureDetector(
-                      onTap: () => _selectBenchmarkSample(p.assetImg, p.subCat, p.defaultKg),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFF059669) : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              p.icon,
-                              size: 16,
-                              color: isSelected ? Colors.white : const Color(0xFF059669),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              p.getName(lang),
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : const Color(0xFF334155),
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    return _buildChip(
+                      label: p.getName(lang),
+                      icon: p.icon,
+                      isActive: isActive,
+                      onTap: () => _selectBenchmarkSample(
+                          p.assetImg, p.subCat, p.defaultKg),
                     );
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // GIZ Real E-Waste Field Samples Bar
-              SizedBox(
-                height: 36,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _gizFieldSamples.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final s = _gizFieldSamples[index];
-                    final isSelected = _benchmarkAssetPath == s.assetImg;
-                    return GestureDetector(
-                      onTap: () => _selectBenchmarkSample(s.assetImg, _selectedSubCategory, 12.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFE2E8F0),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.photo_library_outlined,
-                              size: 13,
-                              color: isSelected ? Colors.white : const Color(0xFF475569),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              s.name,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isSelected ? Colors.white : const Color(0xFF334155),
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                  } else {
+                    final s = _gizFieldSamples[index - presets.length];
+                    final isActive = _benchmarkAssetPath == s.assetImg;
+                    return _buildChip(
+                      label: s.name,
+                      icon: Icons.photo_library_outlined,
+                      isActive: isActive,
+                      onTap: () => _selectBenchmarkSample(
+                          s.assetImg, _selectedSubCategory, 12.0),
+                      muted: true,
                     );
-                  },
-                ),
+                  }
+                },
               ),
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
 
-              // Category & Subcategory card (Clean Minimalist White)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2)),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      switch (lang) {
-                        'mr' => 'साहित्य वर्गीकरण',
-                        'en' => 'Material Classification',
-                        _ => 'सामग्री वर्गीकरण',
-                      },
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedSubCategory,
-                      decoration: InputDecoration(
-                        labelText: switch (lang) {
-                          'mr' => 'विशिष्ट वर्ग',
-                          'en' => 'Specific Sub-Category',
-                          _ => 'विशिष्ट श्रेणी',
-                        },
-                        labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                      isExpanded: true,
-                      items: allPrices.map((p) {
-                        return DropdownMenuItem<String>(
-                          value: p.subCategory,
-                          child: Text(
-                            '${p.category}: ${p.subCategory} (₹${p.netOfferedPrice.toStringAsFixed(0)}/kg)',
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          final match = allPrices.firstWhere((e) => e.subCategory == val);
-                          setState(() {
-                            _selectedSubCategory = val;
-                            _selectedCategory = match.category;
-                          });
-                          _recalcDensityFraud();
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _conditionGrade,
-                      decoration: InputDecoration(
-                        labelText: switch (lang) {
-                          'mr' => 'गुणवत्ता दर्जा (ग्रेड)',
-                          'en' => 'Condition Grade',
-                          _ => 'गुणवत्ता स्तर (ग्रेड)',
-                        },
-                        labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                      items: [
-                        DropdownMenuItem(
-                          value: 'Grade A (Intact)',
-                          child: Text(
-                            switch (lang) {
-                              'mr' => 'Grade A: संपूर्ण व स्वच्छ',
-                              'en' => 'Grade A: Clean & Intact',
-                              _ => 'Grade A: संपूर्ण व अप्रदूषित',
-                            },
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Grade B (Mixed)',
-                          child: Text(
-                            switch (lang) {
-                              'mr' => 'Grade B: अंशतः मिश्रित',
-                              'en' => 'Grade B: Moderately Mixed',
-                              _ => 'Grade B: आंशिक मिश्रित',
-                            },
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Grade C (Broken)',
-                          child: Text(
-                            switch (lang) {
-                              'mr' => 'Grade C: तुटलेले / तुकडे',
-                              'en' => 'Grade C: Broken Pieces',
-                              _ => 'Grade C: खंडित / टूटा हुआ',
-                            },
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
-                          ),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setState(() => _conditionGrade = val);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Weight Input & Presets Card (Minimalist)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2)),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          switch (lang) {
-                            'mr' => 'काट्यावरील वजन (kg)',
-                            'en' => 'Scale Weight (kg)',
-                            _ => 'तराजू वजन (कि.ग्रा.)',
+            // ── Zone 2: Classification & Weight ───────────────────
+            AppSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    switch (lang) {
+                      'mr' => 'साहित्य वर्गीकरण',
+                      'en' => 'Classification',
+                      _ => 'सामग्री वर्गीकरण',
+                    },
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.ink),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Builder(
+                    builder: (context) {
+                      final safeDropdownValue = allPrices.any((p) => p.subCategory == _selectedSubCategory)
+                          ? _selectedSubCategory
+                          : (allPrices.isNotEmpty ? allPrices.first.subCategory : null);
+                      return DropdownButtonFormField<String>(
+                        value: safeDropdownValue,
+                        decoration: InputDecoration(
+                          labelText: switch (lang) {
+                            'mr' => 'विशिष्ट वर्ग',
+                            'en' => 'Sub-Category',
+                            _ => 'विशिष्ट श्रेणी',
                           },
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
                         ),
-                        Text(
-                          switch (lang) {
-                            'mr' => 'दर: ₹${ratePerKg.toStringAsFixed(0)}/किलो',
-                            'en' => 'Rate: ₹${ratePerKg.toStringAsFixed(0)}/kg',
-                            _ => 'दर: ₹${ratePerKg.toStringAsFixed(0)}/कि.ग्रा.',
-                          },
-                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF059669), fontSize: 13),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _weightController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                      decoration: InputDecoration(
-                        suffixText: switch (lang) {
-                          'mr' => 'किलो',
-                          'en' => 'kg',
-                          _ => 'कि.ग्रा.',
+                        isExpanded: true,
+                        items: allPrices.map((p) {
+                          return DropdownMenuItem<String>(
+                            value: p.subCategory,
+                            child: Text(
+                              '${p.category}: ${p.subCategory}',
+                              style: const TextStyle(
+                                  fontSize: 13, color: AppColors.ink),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            final match =
+                                allPrices.firstWhere((e) => e.subCategory == val, orElse: () => allPrices.first);
+                            setState(() {
+                              _selectedSubCategory = val;
+                              _selectedCategory = match.category;
+                            });
+                            _recalcDensityFraud();
+                          }
                         },
-                        suffixStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFF059669), width: 1.8),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  DropdownButtonFormField<String>(
+                    value: _conditionGrade,
+                    decoration: InputDecoration(
+                      labelText: switch (lang) {
+                        'mr' => 'गुणवत्ता दर्जा',
+                        'en' => 'Condition Grade',
+                        _ => 'गुणवत्ता स्तर',
+                      },
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'Grade A (Intact)',
+                        child: Text(
+                          switch (lang) {
+                            'mr' => 'Grade A: संपूर्ण व स्वच्छ',
+                            'en' => 'Grade A: Clean & Intact',
+                            _ => 'Grade A: संपूर्ण व अप्रदूषित',
+                          },
+                          style: const TextStyle(
+                              fontSize: 13, color: AppColors.ink),
                         ),
                       ),
-                      onChanged: (_) => _recalcDensityFraud(),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _buildQuickWeightBtn('+1 kg', 1.0),
-                        const SizedBox(width: 8),
-                        _buildQuickWeightBtn('+5 kg', 5.0),
-                        const SizedBox(width: 8),
-                        _buildQuickWeightBtn('+10 kg', 10.0),
-                        const SizedBox(width: 8),
-                        _buildQuickWeightBtn('+20 kg', 20.0),
-                      ],
-                    ),
-                  ],
-                ),
+                      DropdownMenuItem(
+                        value: 'Grade B (Mixed)',
+                        child: Text(
+                          switch (lang) {
+                            'mr' => 'Grade B: अंशतः मिश्रित',
+                            'en' => 'Grade B: Mixed',
+                            _ => 'Grade B: आंशिक मिश्रित',
+                          },
+                          style: const TextStyle(
+                              fontSize: 13, color: AppColors.ink),
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Grade C (Broken)',
+                        child: Text(
+                          switch (lang) {
+                            'mr' => 'Grade C: तुटलेले',
+                            'en' => 'Grade C: Broken',
+                            _ => 'Grade C: खंडित',
+                          },
+                          style: const TextStyle(
+                              fontSize: 13, color: AppColors.ink),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setState(() => _conditionGrade = val);
+                    },
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: AppSpacing.md),
 
-              // Fraud / Anomaly warning banner if triggered
-              if (_fraudResult != null && _fraudResult!.severity != FraudSeverity.clean) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
+            // Weight + Rate
+            AppSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        switch (lang) {
+                          'mr' => 'वजन (kg)',
+                          'en' => 'Weight (kg)',
+                          _ => 'वजन (कि.ग्रा.)',
+                        },
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: AppColors.ink),
+                      ),
+                      Text(
+                        '₹${ratePerKg.toStringAsFixed(0)}/kg',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.accent,
+                            fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  TextField(
+                    controller: _weightController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink),
+                    decoration: InputDecoration(
+                      suffixText: 'kg',
+                      suffixStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.muted),
+                      filled: true,
+                      fillColor: AppColors.bg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: const BorderSide(
+                            color: AppColors.accent, width: 1.5),
+                      ),
+                    ),
+                    onChanged: (_) => _recalcDensityFraud(),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      _buildQuickWeightBtn('+1', 1.0),
+                      const SizedBox(width: AppSpacing.sm),
+                      _buildQuickWeightBtn('+5', 5.0),
+                      const SizedBox(width: AppSpacing.sm),
+                      _buildQuickWeightBtn('+10', 10.0),
+                      const SizedBox(width: AppSpacing.sm),
+                      _buildQuickWeightBtn('+20', 20.0),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Fraud warning
+            if (_fraudResult != null &&
+                _fraudResult!.severity != FraudSeverity.clean) ...[
+              const SizedBox(height: AppSpacing.md),
+              AppFadeIn(
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: _fraudResult!.severity == FraudSeverity.flag
-                        ? const Color(0xFFFEF2F2)
-                        : const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(12),
+                        ? AppColors.dangerSoft
+                        : AppColors.warnSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(
                       color: _fraudResult!.severity == FraudSeverity.flag
-                          ? const Color(0xFFFECACA)
-                          : const Color(0xFFFDE68A),
+                          ? AppColors.dangerBorder
+                          : AppColors.warnBorder,
                     ),
                   ),
                   child: Row(
@@ -573,46 +514,44 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                       Icon(
                         Icons.warning_amber_rounded,
                         color: _fraudResult!.severity == FraudSeverity.flag
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFFD97706),
-                        size: 26,
+                            ? AppColors.danger
+                            : AppColors.warn,
+                        size: 22,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Text(
                           _fraudResult!.message ??
                               switch (lang) {
-                                'mr' => 'वजन आणि आकार यांच्या प्रमाणात विसंगती आढळली.',
-                                'en' => 'Unusual weight-to-volume ratio detected.',
-                                _ => 'वजन और आकार अनुपात में असामान्य अंतर पाया गया।',
+                                'mr' =>
+                                  'वजन आणि आकार यांच्या प्रमाणात विसंगती.',
+                                'en' => 'Unusual weight-to-volume ratio.',
+                                _ =>
+                                  'वजन और आकार अनुपात में असामान्य अंतर।',
                               },
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: _fraudResult!.severity == FraudSeverity.flag
-                                ? const Color(0xFF991B1B)
-                                : const Color(0xFF92400E),
+                            fontWeight: FontWeight.w600,
+                            color:
+                                _fraudResult!.severity == FraudSeverity.flag
+                                    ? AppColors.danger
+                                    : AppColors.warn,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
+            ],
 
-              const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
 
-              // Valuation Summary Card (Clean Minimalist White with Emerald Accents)
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 3)),
-                  ],
-                ),
+            // ── Zone 3: Valuation & Action ────────────────────────
+            AppFadeIn(
+              delay: const Duration(milliseconds: 100),
+              child: AppSurface(
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -621,64 +560,73 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                       children: [
                         Text(
                           switch (lang) {
-                            'mr' => 'अंदाजे देय रोख रक्कम:',
-                            'en' => 'Estimated Cash Value:',
-                            _ => 'अनुमानित देय नकद राशि:',
+                            'mr' => 'अंदाजे रोख रक्कम',
+                            'en' => 'Estimated Value',
+                            _ => 'अनुमानित नकद राशि',
                           },
-                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                            color: AppColors.accentSoft,
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.sm),
+                            border:
+                                Border.all(color: AppColors.accentBorder),
                           ),
                           child: Text(
                             switch (lang) {
-                              'mr' => 'थेट रोख रक्कम',
+                              'mr' => 'थेट रोख',
                               'en' => 'Spot Cash',
                               _ => 'तुरंत नकद',
                             },
                             style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF065F46),
-                            ),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.accentMuted),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       '₹${totalValuation.toStringAsFixed(0)}',
                       style: const TextStyle(
-                        fontSize: 34,
+                        fontSize: 36,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                        letterSpacing: -0.5,
+                        color: AppColors.ink,
+                        letterSpacing: -1,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Container(height: 1, color: const Color(0xFFF1F5F9)),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.md),
+                    Container(height: 1, color: AppColors.lineSoft),
+                    const SizedBox(height: AppSpacing.md),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           switch (lang) {
-                            'mr' => 'स्थानिक दलालापेक्षा अतिरिक्त नफा:',
-                            'en' => 'Bonus vs Middleman:',
-                            _ => 'स्थानीय दलाल की तुलना में अतिरिक्त बचत:',
+                            'mr' => 'दलालापेक्षा अतिरिक्त नफा',
+                            'en' => 'Bonus vs Middleman',
+                            _ => 'दलाल से अतिरिक्त बचत',
                           },
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                              fontWeight: FontWeight.w500),
                         ),
                         Text(
                           '+₹${collectorSurplus.toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF059669),
+                            color: AppColors.accent,
                           ),
                         ),
                       ],
@@ -686,118 +634,125 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
 
-              // Create Lot Action Button
-              FilledButton(
-                onPressed: () {
-                  final finalWeight = double.tryParse(_weightController.text) ?? 0.0;
-                  if (finalWeight <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(switch (lang) {
-                          'mr' => 'कृपया योग्य वजन प्रविष्ट करा',
-                          'en' => 'Please enter a valid weight',
-                          _ => 'कृपया मान्य वजन दर्ज करें',
-                        }),
-                      ),
-                    );
-                    return;
-                  }
-
-                  final lotId = 'LOT-2026-PUN-${const Uuid().v4().substring(0, 6).toUpperCase()}';
-                  final now = DateTime.now().millisecondsSinceEpoch;
-                  final hash = sha256
-                      .convert(utf8.encode('$lotId:$finalWeight:$_selectedSubCategory'))
-                      .toString();
-
-                  final lot = MaterialsData(
-                    lotId: lotId,
-                    collectorId: user.id,
-                    category: _selectedCategory,
-                    subCategory: _selectedSubCategory,
-                    conditionGrade: _conditionGrade,
-                    estWeightKg: finalWeight,
-                    estValuationInr: totalValuation,
-                    imageEdgeHash: hash.substring(0, 16),
-                    photoPath: _capturedImagePath ?? _benchmarkAssetPath,
-                    isFraudFlagged: _fraudResult?.severity == FraudSeverity.flag,
-                    fraudReason: _fraudResult?.message,
-                    lat: user.lat,
-                    lon: user.lon,
-                    createdAt: now,
-                  );
-
-                  // Insert into real SQLite database
-                  db.insertMaterial(lot);
-
-                  // Enqueue outbox for sync
-                  db.addOutbox(OutboxData(
-                    id: const Uuid().v4(),
-                    entityType: 'MATERIAL_LOT',
-                    entityId: lotId,
-                    payloadJson: jsonEncode(lot.toMap()),
-                    status: 'PENDING',
-                    createdAt: now,
-                  ));
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        switch (lang) {
-                          'mr' => 'डिजिटल लॉट $lotId यशस्वीरीत्या तयार झाला!',
-                          'en' => 'Digital Lot $lotId successfully created!',
-                          _ => 'डिजिटल लॉट $lotId सफलतापूर्वक बना!',
-                        },
-                      ),
-                      backgroundColor: const Color(0xFF059669),
-                    ),
-                  );
-
-                  // Navigate to Lot Details / Recycler Match
-                  context.push('/lot/$lotId');
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF059669),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.check_circle_outline, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      switch (lang) {
-                        'mr' => 'लॉट सेव्ह करा आणि रिसायकलर निवडा →',
-                        'en' => 'Create Lot & Match Recyclers →',
-                        _ => 'लॉट सुरक्षित करें और रीसाइक्लर चुनें →',
-                      },
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
+            // Create Lot Button
+            FilledButton(
+              onPressed: () => _createLot(
+                  db, user, lang, totalValuation, weight),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
+                elevation: 0,
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle_outline, size: 20),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    switch (lang) {
+                      'mr' => 'लॉट तयार करा →',
+                      'en' => 'Create Lot & Match →',
+                      _ => 'लॉट बनाएं →',
+                    },
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
         ),
       ),
     );
   }
 
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  void _createLot(AppDatabase db, dynamic user, String lang,
+      double totalValuation, double weight) {
+    if (weight <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(switch (lang) {
+            'mr' => 'कृपया योग्य वजन प्रविष्ट करा',
+            'en' => 'Please enter a valid weight',
+            _ => 'कृपया मान्य वजन दर्ज करें',
+          }),
+        ),
+      );
+      return;
+    }
+
+    final lotId =
+        'LOT-2026-PUN-${const Uuid().v4().substring(0, 6).toUpperCase()}';
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final hash = sha256
+        .convert(utf8.encode('$lotId:$weight:$_selectedSubCategory'))
+        .toString();
+
+    final lot = MaterialsData(
+      lotId: lotId,
+      collectorId: user.id,
+      category: _selectedCategory,
+      subCategory: _selectedSubCategory,
+      conditionGrade: _conditionGrade,
+      estWeightKg: weight,
+      estValuationInr: totalValuation,
+      imageEdgeHash: hash.substring(0, 16),
+      photoPath: _capturedImagePath ?? _benchmarkAssetPath,
+      isFraudFlagged: _fraudResult?.severity == FraudSeverity.flag,
+      fraudReason: _fraudResult?.message,
+      lat: user.lat,
+      lon: user.lon,
+      createdAt: now,
+    );
+
+    db.insertMaterial(lot);
+
+    db.addOutbox(OutboxData(
+      id: const Uuid().v4(),
+      entityType: 'MATERIAL_LOT',
+      entityId: lotId,
+      payloadJson: jsonEncode(lot.toMap()),
+      status: 'PENDING',
+      createdAt: now,
+    ));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          switch (lang) {
+            'mr' => 'डिजिटल लॉट $lotId तयार!',
+            'en' => 'Lot $lotId created!',
+            _ => 'लॉट $lotId बना!',
+          },
+        ),
+        backgroundColor: AppColors.accent,
+      ),
+    );
+
+    context.push('/lot/$lotId');
+  }
+
   Widget _buildImageOrCaptureArea(String lang) {
-    final hasImg = _capturedImagePath != null || _benchmarkAssetPath != null;
+    final hasImg =
+        _capturedImagePath != null || _benchmarkAssetPath != null;
 
     if (hasImg) {
       return Stack(
         fit: StackFit.expand,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             child: _capturedImagePath != null
                 ? Image.file(File(_capturedImagePath!), fit: BoxFit.cover)
                 : Image.asset(_benchmarkAssetPath!, fit: BoxFit.cover),
@@ -807,11 +762,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               painter: _BoundingBoxPainter(bbox: _aiResult!.bbox),
             ),
           Positioned(
-            top: 8,
-            right: 8,
+            top: AppSpacing.sm,
+            right: AppSpacing.sm,
             child: IconButton.filled(
               style: IconButton.styleFrom(
-                backgroundColor: Colors.black54,
+                backgroundColor: Colors.black45,
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.refresh, size: 18),
@@ -822,42 +777,17 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               }),
             ),
           ),
-          Positioned(
-            bottom: 8,
-            left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          if (_isAnalyzing)
+            Container(
               decoration: BoxDecoration(
-                color: const Color(0xCC0F172A),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.black38,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.check_circle, size: 14, color: Color(0xFF34D399)),
-                  const SizedBox(width: 4),
-                  Text(
-                    _isAnalyzing
-                        ? switch (lang) {
-                            'mr' => 'AI विश्लेषण सुरू आहे...',
-                            'en' => 'AI analyzing pixels...',
-                            _ => 'AI विश्लेषण प्रगति पर है...',
-                          }
-                        : switch (lang) {
-                            'mr' => '✓ फोटो लोड झाला',
-                            'en' => '✓ Image Loaded & Scanned',
-                            _ => '✓ ई-कचरा फोटो लोड संपन्न',
-                          },
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+              child: const Center(
+                child: CircularProgressIndicator(
+                    color: AppColors.accent, strokeWidth: 2.5),
               ),
             ),
-          ),
         ],
       );
     }
@@ -866,24 +796,28 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: const Color(0xFFECFDF5),
+            color: AppColors.accentSoft,
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFA7F3D0)),
+            border: Border.all(color: AppColors.accentBorder),
           ),
-          child: const Icon(Icons.photo_camera_outlined, size: 32, color: Color(0xFF059669)),
+          child: const Icon(Icons.photo_camera_outlined,
+              size: 28, color: AppColors.accent),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.md),
         Text(
           switch (lang) {
-            'mr' => 'ई-कचऱ्याचा फोटो घ्या किंवा नमुना निवडा',
-            'en' => 'Capture E-Waste Photo or Select Sample',
-            _ => 'ई-कचरे की फोटो लें या नीचे से नमुना चुनें',
+            'mr' => 'ई-कचऱ्याचा फोटो घ्या',
+            'en' => 'Capture E-Waste Photo',
+            _ => 'ई-कचरे की फोटो लें',
           },
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+          style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: AppColors.ink),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -896,15 +830,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                 _ => 'कैमरा',
               }),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF059669),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                minimumSize: const Size(0, 38),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             OutlinedButton.icon(
               onPressed: () => _takePhoto(ImageSource.gallery),
               icon: const Icon(Icons.photo_library_outlined, size: 16),
@@ -914,11 +845,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                 _ => 'गैलरी',
               }),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF334155),
-                side: const BorderSide(color: Color(0xFFCBD5E1)),
-                minimumSize: const Size(0, 38),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               ),
             ),
           ],
@@ -927,95 +856,176 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     );
   }
 
-  Widget _buildAiInferenceHud(String lang) {
+  Widget _buildAiResultCard(String lang) {
     final res = _aiResult!;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFECFDF5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFA7F3D0)),
-      ),
+    final confidencePct = (res.confidence * 100).toStringAsFixed(1);
+
+    return AppSurface(
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF059669)),
-                  const SizedBox(width: 6),
-                  Text(
-                    'AI Edge Detection: ${res.category}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: Color(0xFF065F46),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      switch (lang) {
+                        'mr' => res.marathiName,
+                        'en' => res.category,
+                        _ => res.hindiName,
+                      },
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: AppColors.ink),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      res.subCategory,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '$confidencePct%',
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.accent),
+                  ),
+                  Text(
+                    '${res.latencyMs}ms',
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.muted),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF059669),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${(res.confidence * 100).toStringAsFixed(1)}% Conf • ${res.latencyMs}ms',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.sm),
+          // Confidence bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: LinearProgressIndicator(
+              value: res.confidence,
+              backgroundColor: AppColors.lineSoft,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.accent),
+              minHeight: 4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              Text(
-                switch (lang) {
-                  'mr' => 'ओळख: ${res.marathiName}',
-                  'en' => 'Identified: ${res.subCategory}',
-                  _ => 'पहचान: ${res.hindiName}',
-                },
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF334155),
+              // Model badge — Offline Edge ONNX AI
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(color: AppColors.accentBorder),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bolt, size: 11, color: AppColors.accentMuted),
+                    SizedBox(width: 3),
+                    Text(
+                      'Edge ONNX AI (Offline)',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accentMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
-              if (res.hazardLevel == 'HIGH')
+              if (res.hazardLevel == 'HIGH') ...[
+                const SizedBox(width: AppSpacing.sm),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFFECACA)),
+                    color: AppColors.dangerSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(color: AppColors.dangerBorder),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.warning, size: 11, color: Color(0xFFDC2626)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Hazard: ${res.hazardDescription}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF991B1B),
-                        ),
-                      ),
-                    ],
+                  child: const Text(
+                    '⚠ Hazard',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.danger),
                   ),
                 ),
+              ],
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChip({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+    bool muted = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          debugPrint('[UI] Chip tapped: $label');
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive
+                ? (muted ? AppColors.accentMuted : AppColors.accent)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: isActive
+                  ? (muted ? AppColors.accentMuted : AppColors.accent)
+                  : AppColors.line,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon,
+                  size: 14,
+                  color: isActive ? Colors.white : AppColors.muted),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isActive ? Colors.white : AppColors.ink,
+                  fontWeight:
+                      isActive ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1029,20 +1039,19 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
           _recalcDensityFraud();
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 7),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            color: AppColors.bg,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: AppColors.line),
           ),
           alignment: Alignment.center,
           child: Text(
             label,
             style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-              color: Color(0xFF334155),
-            ),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: AppColors.ink),
           ),
         ),
       ),
@@ -1057,43 +1066,44 @@ class _BoundingBoxPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (bbox.length < 4) return;
+    if (bbox.length < 4 || bbox.every((v) => v == 0)) return;
 
     final paint = Paint()
-      ..color = const Color(0xFF10B981)
+      ..color = AppColors.accent
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
+      ..strokeWidth = 2.0;
 
-    // Scale bbox from 480x640 reference to view size
     final left = (bbox[0] / 480.0) * size.width;
     final top = (bbox[1] / 640.0) * size.height;
     final right = (bbox[2] / 480.0) * size.width;
     final bottom = (bbox[3] / 640.0) * size.height;
 
     final rect = Rect.fromLTRB(left, top, right, bottom);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), paint);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(6)), paint);
 
-    // Draw Corner markers
+    // Corner markers
     final cornerPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5;
+      ..strokeWidth = 3.0;
 
-    const cornerLen = 14.0;
-    // Top-left
-    canvas.drawLine(Offset(left, top), Offset(left + cornerLen, top), cornerPaint);
-    canvas.drawLine(Offset(left, top), Offset(left, top + cornerLen), cornerPaint);
-    // Top-right
-    canvas.drawLine(Offset(right, top), Offset(right - cornerLen, top), cornerPaint);
-    canvas.drawLine(Offset(right, top), Offset(right, top + cornerLen), cornerPaint);
-    // Bottom-left
-    canvas.drawLine(Offset(left, bottom), Offset(left + cornerLen, bottom), cornerPaint);
-    canvas.drawLine(Offset(left, bottom), Offset(left, bottom - cornerLen), cornerPaint);
-    // Bottom-right
-    canvas.drawLine(Offset(right, bottom), Offset(right - cornerLen, bottom), cornerPaint);
-    canvas.drawLine(Offset(right, bottom), Offset(right, bottom - cornerLen), cornerPaint);
+    const cl = 12.0;
+    canvas.drawLine(Offset(left, top), Offset(left + cl, top), cornerPaint);
+    canvas.drawLine(Offset(left, top), Offset(left, top + cl), cornerPaint);
+    canvas.drawLine(Offset(right, top), Offset(right - cl, top), cornerPaint);
+    canvas.drawLine(Offset(right, top), Offset(right, top + cl), cornerPaint);
+    canvas.drawLine(
+        Offset(left, bottom), Offset(left + cl, bottom), cornerPaint);
+    canvas.drawLine(
+        Offset(left, bottom), Offset(left, bottom - cl), cornerPaint);
+    canvas.drawLine(
+        Offset(right, bottom), Offset(right - cl, bottom), cornerPaint);
+    canvas.drawLine(
+        Offset(right, bottom), Offset(right, bottom - cl), cornerPaint);
   }
 
   @override
-  bool shouldRepaint(covariant _BoundingBoxPainter oldDelegate) => oldDelegate.bbox != bbox;
+  bool shouldRepaint(covariant _BoundingBoxPainter oldDelegate) =>
+      oldDelegate.bbox != bbox;
 }

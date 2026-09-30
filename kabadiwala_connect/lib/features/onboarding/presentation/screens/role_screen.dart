@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_routes.dart';
+import '../../../../core/constants/app_theme.dart';
 import '../../../../core/providers/app_state.dart';
+import '../../../../core/widgets/app_surface.dart';
 
 class RoleScreen extends ConsumerStatefulWidget {
   const RoleScreen({super.key});
@@ -105,10 +107,11 @@ class _RoleScreenState extends ConsumerState<RoleScreen> {
               FilledButton(
                 onPressed: () {
                   ref.read(appStateProvider.notifier).setRole(_selectedRole);
+                  ref.read(sharedPreferencesProvider)?.setBool('onboarding_completed', true);
                   if (_selectedRole == 'recycler') {
                     context.go(AppRoutes.recyclerDash);
                   } else {
-                    context.push(AppRoutes.walkthrough);
+                    context.go(AppRoutes.scanner);
                   }
                 },
                 style: FilledButton.styleFrom(

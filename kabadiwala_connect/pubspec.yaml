@@ -44,10 +44,14 @@ dependencies:
 
   # ── UI components & charts ──────────────────────────────────
   fl_chart: ^0.68.0
+  google_fonts: ^6.2.1
 
   # ── PDF generation (handover receipt) ───────────────────────
   pdf: ^3.11.0
   printing: ^5.13.1
+
+  # ── ONNX Runtime (real AI model inference) ──────────────────
+  flutter_onnxruntime: ^1.8.1
 
   # ── Utilities ────────────────────────────────────────────────
   intl: ^0.20.2

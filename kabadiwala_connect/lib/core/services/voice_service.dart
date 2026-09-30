@@ -38,11 +38,14 @@ class VoiceService {
       _isInitialized = true;
     } catch (e) {
       debugPrint('Failed to initialize FlutterTts: $e');
+      _tts = null;
+      _isInitialized = true;
     }
   }
 
   Future<void> speak(String text, {String lang = 'hi'}) async {
     if (!_isInitialized) await _initTts();
+    if (_tts == null) return;
 
     try {
       final ttsLang = switch (lang) {
@@ -51,8 +54,8 @@ class VoiceService {
         _ => 'hi-IN',
       };
 
-      await _tts?.setLanguage(ttsLang);
-      await _tts?.speak(text);
+      await _tts?.setLanguage(ttsLang).timeout(const Duration(milliseconds: 800));
+      await _tts?.speak(text).timeout(const Duration(milliseconds: 1500));
     } catch (e) {
       debugPrint('Error speaking text: $e');
     }

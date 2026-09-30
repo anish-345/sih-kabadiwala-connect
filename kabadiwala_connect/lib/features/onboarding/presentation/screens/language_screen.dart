@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_routes.dart';
+import '../../../../core/constants/app_theme.dart';
 import '../../../../core/providers/app_state.dart';
 import '../../../../core/services/voice_service.dart';
 
@@ -15,6 +16,12 @@ class LanguageScreen extends ConsumerStatefulWidget {
 
 class _LanguageScreenState extends ConsumerState<LanguageScreen> {
   String _selectedLang = 'hi';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLang = ref.read(appStateProvider).language;
+  }
 
   final List<({String code, String nativeName, String englishName, String greeting})> _languages = [
     (

@@ -58,9 +58,9 @@
       "name": "ABS / PVC E-Waste Casing",
       "hindi": "ई-कचरा प्लास्टिक आवरण",
       "marathi": "प्लॅस्टिक कव्हर",
-      "defaultSubCategory": "Mixed Low-Grade Telecom E-Waste",
-      "category": "Telecom",
-      "hazard": "None"
+      "defaultSubCategory": "Flame-Retardant E-Plastics (ABS/HIPS)",
+      "category": "Plastics",
+      "hazard": "Toxic - Brominated Flame Retardants (BFR)"
     }
   ]
 }

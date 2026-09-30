@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
-
+import '../../../../core/constants/app_theme.dart';
 import '../../../../core/providers/app_state.dart';
 import '../../../../core/storage/database.dart';
 import '../../../../core/storage/models.dart';
@@ -62,26 +62,26 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
     final finalValuation = lot.estValuationInr * selectedRecycler.priceMultiplier;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
         title: Text(
           switch (lang) {
             'mr' => 'लॉट तपशील व रिसायकलर निवड',
-            'en' => 'Lot Details & Recycler Match',
-            _ => 'लॉट विवरण व रीसाइक्लर चयन',
+            'en' => 'Lot & Recycler Match',
+            _ => 'लॉट व रीसाइक्लर चयन',
           },
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1.0),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1.0),
+          child: Divider(height: 1, color: AppColors.line),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -105,16 +105,16 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                            color: AppColors.accentSoft,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: AppColors.accentBorder),
                           ),
                           child: Text(
                             lot.lotId,
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF065F46),
+                              color: AppColors.accentMuted,
                             ),
                           ),
                         ),
@@ -122,8 +122,8 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: AppColors.line),
                           ),
                           child: Text(
                             lot.conditionGrade,
@@ -135,7 +135,7 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                     const SizedBox(height: 12),
                     Text(
                       '${lot.category}: ${lot.subCategory}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -151,7 +151,7 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                         ),
                         Text(
                           '₹${finalValuation.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.accent),
                         ),
                       ],
                     ),
@@ -170,18 +170,18 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> {
                       'en' => 'Authorized Recycler Match:',
                       _ => 'अधिकृत रीसाइक्लर वरीयता क्रम:',
                     },
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                      color: AppColors.infoSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: AppColors.infoBorder),
                     ),
                     child: const Text(
                       'CPCB Valid',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8)),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.info),
                     ),
                   ),
                 ],

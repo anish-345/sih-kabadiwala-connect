@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/app_theme.dart';
 import '../../../../core/providers/app_state.dart';
 import '../../../../core/services/pdf_service.dart';
 import '../../../../core/storage/database.dart';
 import '../../../../core/storage/models.dart';
+import '../../../../core/widgets/app_surface.dart';
 
 class EarningsScreen extends ConsumerStatefulWidget {
   const EarningsScreen({super.key});
@@ -23,7 +25,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
     final lang = user.language;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: StreamBuilder<List<TransactionsData>>(
           stream: db.watchTransactions(),
@@ -59,18 +61,11 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                       children: [
                         // Minimalist Summary Card (Clean White with hairline border & subtle emerald accents)
                         Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(AppSpacing.lg),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x06000000),
-                                blurRadius: 12,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            border: Border.all(color: AppColors.line),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,7 +79,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                                         width: 10,
                                         height: 10,
                                         decoration: const BoxDecoration(
-                                          color: Color(0xFF059669),
+                                          color: AppColors.accent,
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -92,7 +87,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                                       Text(
                                         user.displayName,
                                         style: const TextStyle(
-                                          color: Color(0xFF0F172A),
+                                          color: AppColors.ink,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -104,7 +99,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFECFDF5),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                                      border: Border.all(color: AppColors.accentBorder),
                                     ),
                                     child: Text(
                                       switch (lang) {
@@ -115,7 +110,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                                       style: const TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
-                                        color: Color(0xFF065F46),
+                                        color: AppColors.accentMuted,
                                       ),
                                     ),
                                   ),
@@ -129,7 +124,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                                   _ => 'कुल प्राप्त नकद राशि:',
                                 },
                                 style: const TextStyle(
-                                  color: Color(0xFF64748B),
+                                  color: AppColors.muted,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -140,14 +135,14 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                                 style: const TextStyle(
                                   fontSize: 36,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F172A),
+                                  color: AppColors.ink,
                                   letterSpacing: -0.5,
                                 ),
                               ),
                               const SizedBox(height: 16),
                               Container(
                                 height: 1,
-                                color: const Color(0xFFF1F5F9),
+                                color: AppColors.lineSoft,
                               ),
                               const SizedBox(height: 14),
                               Row(
@@ -341,17 +336,17 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF059669) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? AppColors.accent : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
           border: Border.all(
-            color: isSelected ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+            color: isSelected ? AppColors.accent : AppColors.line,
             width: 1.0,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : const Color(0xFF475569),
+            color: isSelected ? Colors.white : AppColors.muted,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             fontSize: 12,
           ),

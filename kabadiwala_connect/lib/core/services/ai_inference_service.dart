@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 
 import '../utils/density_fraud_detector.dart';
+
+// ── Data Models ───────────────────────────────────────────────────────────────
 
 class AiModelMeta {
   final String modelName;
@@ -80,12 +83,13 @@ class AiDetectionResult {
   final String hindiName;
   final String marathiName;
   final double confidence;
-  final List<double> bbox; // [x1, y1, x2, y2]
+  final List<double> bbox;
   final int latencyMs;
   final String hazardLevel;
   final String hazardDescription;
   final double estimatedVolumeM3;
   final DensityFraudResult fraudResult;
+  final bool usedRealModel;
 
   const AiDetectionResult({
     required this.category,
@@ -99,22 +103,34 @@ class AiDetectionResult {
     required this.hazardDescription,
     required this.estimatedVolumeM3,
     required this.fraudResult,
+    this.usedRealModel = false,
   });
 }
+
+// ── Inference Service ─────────────────────────────────────────────────────────
 
 class AiInferenceService {
   AiModelMeta? _meta;
   List<AiCategoryLabel> _labels = [];
   bool _initialized = false;
-  Uint8List? _onnxModelHeader;
+
+  // ONNX Runtime components
+  final OnnxRuntime _ort = OnnxRuntime();
+  OrtSession? _session;
+  bool _onnxReady = false;
+
+  static const int _inputSize = 224;
 
   Future<void> initialize() async {
     if (_initialized) return;
     try {
+      // Load metadata
       final metaStr =
           await rootBundle.loadString('assets/models/model_metadata.json');
-      _meta = AiModelMeta.fromJson(jsonDecode(metaStr) as Map<String, dynamic>);
+      _meta =
+          AiModelMeta.fromJson(jsonDecode(metaStr) as Map<String, dynamic>);
 
+      // Load labels
       final labelStr =
           await rootBundle.loadString('assets/models/labels.json');
       final labelJson = jsonDecode(labelStr) as Map<String, dynamic>;
@@ -123,70 +139,31 @@ class AiInferenceService {
           .map((e) => AiCategoryLabel.fromJson(e as Map<String, dynamic>))
           .toList();
 
-      // Read real ONNX model weights asset header to confirm neural pipeline integrity
+      // Load ONNX model into real inference session
       try {
-        final byteData =
-            await rootBundle.load('assets/models/ewaste_yolov8n_cls.onnx');
-        _onnxModelHeader = byteData.buffer.asUint8List(0, math.min(128, byteData.lengthInBytes));
-      } catch (_) {
-        // ONNX file verified through filesystem fallback
+        _session = await _ort
+            .createSessionFromAsset('assets/models/ewaste_yolov8n_cls.onnx');
+        _onnxReady = true;
+        debugPrint(
+            '[AI] ONNX Runtime session created — offline edge model active');
+      } catch (e, stack) {
+        debugPrint('[AI] ONNX session creation failed: $e\n$stack');
+        _onnxReady = false;
       }
 
       _initialized = true;
-    } catch (_) {
-      // Baseline SIH 26229 labels fallback
-      _labels = [
-        AiCategoryLabel(
-          id: 0,
-          key: 'pcb',
-          name: 'Printed Circuit Boards (PCB)',
-          hindi: 'प्रिंटेड सर्किट बोर्ड',
-          marathi: 'सर्किट बोर्ड',
-          defaultSubCategory: 'Mid Grade (Motherboards / GPUs)',
-          category: 'PCB',
-          hazard: 'Low - Lead Solder',
-        ),
-        AiCategoryLabel(
-          id: 1,
-          key: 'cable_copper',
-          name: 'Insulated Copper Cables',
-          hindi: 'तांबे के तार व केबल',
-          marathi: 'तांब्याची वायर',
-          defaultSubCategory: 'Heavy Copper Cables (Insulated)',
-          category: 'Cables',
-          hazard: 'None',
-        ),
-        AiCategoryLabel(
-          id: 2,
-          key: 'battery_li',
-          name: 'Lithium-Ion & Lead Batteries',
-          hindi: 'लिथियम-आयन / लेड बैटरी',
-          marathi: 'लिथियम बॅटरी',
-          defaultSubCategory: 'Lithium-Ion Cells (Laptop / EV / Mobile)',
-          category: 'Batteries',
-          hazard: 'High - Fire & Acid Hazard',
-        ),
-        AiCategoryLabel(
-          id: 3,
-          key: 'crt_monitor',
-          name: 'CRT Funnel Glass & Display',
-          hindi: 'सीआरटी मॉनिटर व डिस्प्ले ग्लास',
-          marathi: 'सीआरटी काच',
-          defaultSubCategory: 'CRT Funnel Glass / Monitors',
-          category: 'Displays',
-          hazard: 'Medium - Lead Impregnated',
-        ),
-      ];
+    } catch (e) {
+      debugPrint('[AI] Initialization error: $e');
+      _labels = _getBaselineLabels();
       _initialized = true;
     }
   }
 
   List<AiCategoryLabel> get labels => _labels;
   AiModelMeta? get metadata => _meta;
-  Uint8List? get onnxModelHeader => _onnxModelHeader;
+  bool get isOnnxActive => _onnxReady;
 
-  /// Pure Mathematical & Computer Vision Edge ML Inference
-  /// Runs on actual image pixel data (no filename heuristics)
+  /// Run inference on an image — uses real ONNX model when available
   Future<AiDetectionResult> inferImage({
     String? filePath,
     Uint8List? imageBytes,
@@ -198,8 +175,8 @@ class AiInferenceService {
 
     final stopwatch = Stopwatch()..start();
 
-    // 1. Fetch raw bytes from either memory or file
-    Uint8List rawBytes;
+    // 1. Load raw bytes
+    Uint8List rawBytes = Uint8List(0);
     if (imageBytes != null && imageBytes.isNotEmpty) {
       rawBytes = imageBytes;
     } else if (filePath != null && filePath.isNotEmpty) {
@@ -217,179 +194,216 @@ class AiInferenceService {
           rawBytes = Uint8List(0);
         }
       }
-    } else {
-      rawBytes = Uint8List(0);
     }
 
-    // 2. Process image through neural feature extraction and Softmax
-    final inferenceOutcome = _processPixelsAndInfer(
-      rawBytes,
-      frameW: frameW,
-      frameH: frameH,
-    );
+    if (rawBytes.isEmpty) {
+      stopwatch.stop();
+      return _buildEmptyResult(stopwatch.elapsedMilliseconds, weightKg,
+          frameW, frameH);
+    }
 
-    final targetKey = inferenceOutcome.predictedKey;
-    final confidence = inferenceOutcome.confidence;
-    final bbox = inferenceOutcome.bbox;
+    // 2. Decode image
+    img.Image? decoded;
+    try {
+      decoded = img.decodeImage(rawBytes);
+    } catch (_) {
+      decoded = null;
+    }
+
+    if (decoded == null) {
+      stopwatch.stop();
+      return _buildEmptyResult(stopwatch.elapsedMilliseconds, weightKg,
+          frameW, frameH);
+    }
+
+    // 3. Run real ONNX inference (Model itself is the offline inference, no heuristic fallback)
+    final outcome = await _runOnnxInference(decoded, frameW, frameH);
 
     final matchedLabel = _labels.firstWhere(
-      (l) => l.key == targetKey,
+      (l) => l.key == outcome.predictedKey,
       orElse: () => _labels.first,
     );
 
-    // 3. Calculate 3D physical volume based on dynamic bounding box
-    final wPx = bbox[2] - bbox[0];
-    final hPx = bbox[3] - bbox[1];
-    final realW = (wPx / frameW) * 2 * math.tan(65.0 * math.pi / 360.0) * 0.40;
-    final realH = (hPx / frameH) * 2 * math.tan(50.0 * math.pi / 360.0) * 0.40;
+    // 4. Calculate 3D volume from bounding box
+    final wPx = outcome.bbox[2] - outcome.bbox[0];
+    final hPx = outcome.bbox[3] - outcome.bbox[1];
+    final realW =
+        (wPx / frameW) * 2 * math.tan(65.0 * math.pi / 360.0) * 0.40;
+    final realH =
+        (hPx / frameH) * 2 * math.tan(50.0 * math.pi / 360.0) * 0.40;
     final realD = realW * 0.70;
     final volumeM3 = math.max(0.0001, realW * realH * realD);
 
-    // 4. Run Volume-Density Z-score Anti-Fraud Detector (SIH Spec 07)
+    // 5. Density fraud detection
     final fraudRes = DensityFraudDetector.analyse(
-      bbox: bbox,
+      bbox: outcome.bbox,
       frameW: frameW,
       frameH: frameH,
       weightKg: weightKg,
-      subCategory: targetKey,
+      subCategory: outcome.predictedKey,
     );
 
     stopwatch.stop();
-    final elapsed = stopwatch.elapsedMilliseconds;
-    final latency = math.max(1, elapsed);
+    final latency = math.max(1, stopwatch.elapsedMilliseconds);
 
     return AiDetectionResult(
       category: matchedLabel.category,
       subCategory: matchedLabel.defaultSubCategory,
       hindiName: matchedLabel.hindi,
       marathiName: matchedLabel.marathi,
-      confidence: confidence,
-      bbox: bbox,
+      confidence: outcome.confidence,
+      bbox: outcome.bbox,
       latencyMs: latency,
       hazardLevel: _getHazardLevel(matchedLabel.hazard),
       hazardDescription: matchedLabel.hazard,
       estimatedVolumeM3: volumeM3,
       fraudResult: fraudRes,
+      usedRealModel: true,
     );
   }
 
-  /// Decodes image pixels, extracts chromatic moments & spatial gradients,
-  /// and executes Softmax neural classification.
-  _InferenceOutcome _processPixelsAndInfer(
-    Uint8List bytes, {
-    required int frameW,
-    required int frameH,
-  }) {
-    if (bytes.isEmpty) {
-      return _InferenceOutcome(
-        predictedKey: 'pcb',
-        confidence: 0.942,
-        bbox: [45.0, 65.0, 420.0, 490.0],
-      );
-    }
+  // ── Real ONNX Inference (Offline Edge Engine) ──────────────────────────────
 
-    img.Image? decoded;
-    try {
-      decoded = img.decodeImage(bytes);
-    } catch (_) {
-      decoded = null;
-    }
-
-    if (decoded != null) {
-      return _inferFromDecodedImage(decoded, frameW, frameH);
-    } else {
-      // Fallback for raw RGB pixel byte buffers (such as in synthetic unit tests)
-      return _inferFromRawBytes(bytes, frameW, frameH);
-    }
-  }
-
-  _InferenceOutcome _inferFromDecodedImage(
+  Future<_InferenceOutcome> _runOnnxInference(
     img.Image srcImage,
     int frameW,
     int frameH,
-  ) {
-    // Downscale for high-speed edge feature extraction (128x128)
-    const procW = 128;
-    const procH = 128;
-    final resized = img.copyResize(srcImage, width: procW, height: procH);
+  ) async {
+    if (_session == null) {
+      _session = await _ort
+          .createSessionFromAsset('assets/models/ewaste_yolov8n_cls.onnx');
+      _onnxReady = true;
+    }
 
-    int copperCount = 0;
-    int greenCount = 0;
-    int blueCount = 0;
-    int glassCount = 0;
-    int centerTotalPx = 0;
+    // Resize to model input dimensions (224 × 224)
+    final resized =
+        img.copyResize(srcImage, width: _inputSize, height: _inputSize);
 
-    const totalPx = procW * procH;
-    final lumMatrix = List.generate(procH, (_) => Float32List(procW));
+    // Build CHW float tensor normalized to [0, 1]
+    // YOLOv8-cls expects NCHW format: [1, 3, 224, 224]
+    const pixelCount = _inputSize * _inputSize;
+    final floatData = Float32List(3 * pixelCount);
 
-    // Focus on center 60% where scrap lot is positioned in viewfinder
-    const minCenter = 25;
-    const maxCenter = 103;
-
-    for (int y = 0; y < procH; y++) {
-      for (int x = 0; x < procW; x++) {
+    for (int y = 0; y < _inputSize; y++) {
+      for (int x = 0; x < _inputSize; x++) {
         final pixel = resized.getPixel(x, y);
-        final r = pixel.r.toDouble();
-        final g = pixel.g.toDouble();
-        final b = pixel.b.toDouble();
-
-        // Luminance for gradient energy
-        final lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        lumMatrix[y][x] = lum;
-
-        if (x >= minCenter && x <= maxCenter && y >= minCenter && y <= maxCenter) {
-          centerTotalPx++;
-
-          // 1. Exposed copper conductor strands (orange-red metallic)
-          if (r > 1.12 * g && g > 1.02 * b && r > 65) {
-            copperCount++;
-          }
-          // 2. FR-4 Circuit Board Resin (distinctive PCB green)
-          if (g > 1.05 * r && g > 1.05 * b && g > 45) {
-            greenCount++;
-          }
-          // 3. Lithium-Ion Battery Packs (18650 blue cells / metallic foil)
-          if (b > 1.08 * r && b > 1.02 * g && b > 50) {
-            blueCount++;
-          }
-          // 4. CRT Funnel Glass (neutral dark lead-impregnated glass profile)
-          if (lum > 20 && lum < 90 && (r - b).abs() < 22 && (r - g).abs() < 22) {
-            glassCount++;
-          }
-        }
+        final idx = y * _inputSize + x;
+        floatData[idx] = pixel.r / 255.0; // R channel
+        floatData[pixelCount + idx] = pixel.g / 255.0; // G channel
+        floatData[2 * pixelCount + idx] = pixel.b / 255.0; // B channel
       }
     }
 
-    final divisor = centerTotalPx > 0 ? centerTotalPx : totalPx;
-    final copperFrac = copperCount / divisor;
-    final greenFrac = greenCount / divisor;
-    final blueFrac = blueCount / divisor;
-    final glassFrac = glassCount / divisor;
+    // Create ORT input tensor
+    final inputTensor = await OrtValue.fromList(
+      floatData.toList(),
+      [1, 3, _inputSize, _inputSize],
+    );
 
-    // Mathematical Neural Logit Activations
-    final zPcb = 20.0 * greenFrac - 10.0 * copperFrac - 10.0 * blueFrac - 5.0 * glassFrac;
-    final zCable = 22.0 * copperFrac - 12.0 * greenFrac - 10.0 * blueFrac - 5.0 * glassFrac;
-    final zBattery = 24.0 * blueFrac - 10.0 * greenFrac - 8.0 * copperFrac - 5.0 * glassFrac;
-    final zCrt = 18.0 * glassFrac - 12.0 * copperFrac - 12.0 * blueFrac - 8.0 * greenFrac - 1.0;
+    // Run inference
+    final outputs = await _session!.run({'images': inputTensor});
 
-    final logits = [zPcb, zCable, zBattery, zCrt];
-    final maxLogit = logits.reduce(math.max);
+    // Parse output — YOLOv8-cls outputs shape [1, numClasses]
+    final outputKey = outputs.keys.first;
+    final outputValue = outputs[outputKey]!;
+    final dynamic rawData = await outputValue.asList();
 
-    final expLogits = logits.map((z) => math.exp(z - maxLogit)).toList();
-    final sumExp = expLogits.reduce((a, b) => a + b);
-    final probs = expLogits.map((e) => e / sumExp).toList();
+    // Universal numeric extractor: Handles any nested structure (Float32List, List<Float32List>, etc.)
+    final List<double> rawScores = _extractDoubles(rawData);
 
-    const keys = ['pcb', 'cable_copper', 'battery_li', 'crt_monitor'];
+    // Apply softmax
+    final probs = _softmax(rawScores);
+
+    // Map model output indices to our label keys
+    final numClasses = math.min(probs.length, _labels.length);
+
     int topIdx = 0;
-    double maxProb = probs[0];
-    for (int i = 1; i < probs.length; i++) {
+    double maxProb = probs.isNotEmpty ? probs[0] : 0.5;
+    for (int i = 1; i < numClasses; i++) {
       if (probs[i] > maxProb) {
         maxProb = probs[i];
         topIdx = i;
       }
     }
 
-    // Spatial gradient energy map for genuine bounding box localization
+    final predictedLabel =
+        topIdx < _labels.length ? _labels[topIdx] : _labels.first;
+
+    // Generate bbox via gradient energy localization on the real image
+    final bbox = _computeBbox(srcImage, frameW, frameH, predictedLabel.key);
+
+    debugPrint(
+        '[AI] ONNX result: ${predictedLabel.key} @ ${(maxProb * 100).toStringAsFixed(1)}%');
+
+    return _InferenceOutcome(
+      predictedKey: predictedLabel.key,
+      confidence: maxProb,
+      bbox: bbox,
+    );
+  }
+
+  /// Recursively extracts all double/numeric values from any nested tensor structure
+  List<double> _extractDoubles(dynamic obj) {
+    final List<double> result = [];
+    void extract(dynamic item) {
+      if (item == null) return;
+      if (item is num) {
+        result.add(item.toDouble());
+      } else if (item is Float32List) {
+        for (int i = 0; i < item.length; i++) {
+          result.add(item[i].toDouble());
+        }
+      } else if (item is Float64List) {
+        for (int i = 0; i < item.length; i++) {
+          result.add(item[i]);
+        }
+      } else if (item is Iterable) {
+        for (final sub in item) {
+          extract(sub);
+        }
+      }
+    }
+    extract(obj);
+    return result;
+  }
+
+  // ── Shared Utilities ───────────────────────────────────────────────────────
+
+  List<double> _softmax(List<double> logits) {
+    if (logits.isEmpty) return [];
+    final maxLogit = logits.reduce(math.max);
+    final expLogits = logits.map((z) {
+      final diff = z - maxLogit;
+      return (diff.isNaN || diff.isInfinite) ? 1.0 : math.exp(diff);
+    }).toList();
+    final sumExp = expLogits.reduce((a, b) => a + b);
+    if (sumExp == 0 || sumExp.isNaN) {
+      return List.filled(logits.length, 1.0 / logits.length);
+    }
+    return expLogits.map((e) => e / sumExp).toList();
+  }
+
+  List<double> _computeBbox(
+    img.Image srcImage,
+    int frameW,
+    int frameH,
+    String categoryKey,
+  ) {
+    // Compute gradient energy centroid for localization
+    const procW = 128;
+    const procH = 128;
+    final resized = img.copyResize(srcImage, width: procW, height: procH);
+
+    final lumMatrix = List.generate(procH, (_) => Float32List(procW));
+    for (int y = 0; y < procH; y++) {
+      for (int x = 0; x < procW; x++) {
+        final p = resized.getPixel(x, y);
+        lumMatrix[y][x] =
+            0.299 * p.r.toDouble() + 0.587 * p.g.toDouble() +
+                0.114 * p.b.toDouble();
+      }
+    }
+
     double totalEnergy = 0.0;
     double weightedX = 0.0;
     double weightedY = 0.0;
@@ -399,7 +413,6 @@ class AiInferenceService {
         final gx = (lumMatrix[y][x + 1] - lumMatrix[y][x - 1]).abs();
         final gy = (lumMatrix[y + 1][x] - lumMatrix[y - 1][x]).abs();
         final energy = gx + gy;
-
         if (energy > 10.0) {
           totalEnergy += energy;
           weightedX += x * energy;
@@ -411,109 +424,63 @@ class AiInferenceService {
     final cx = totalEnergy > 0 ? (weightedX / totalEnergy) : 64.0;
     final cy = totalEnergy > 0 ? (weightedY / totalEnergy) : 64.0;
 
-    double spreadX = 0.0;
-    double spreadY = 0.0;
+    double spreadX = 25.0;
+    double spreadY = 25.0;
     if (totalEnergy > 0) {
+      double sX = 0, sY = 0;
       for (int y = 1; y < procH - 1; y++) {
         for (int x = 1; x < procW - 1; x++) {
           final gx = (lumMatrix[y][x + 1] - lumMatrix[y][x - 1]).abs();
           final gy = (lumMatrix[y + 1][x] - lumMatrix[y - 1][x]).abs();
           final energy = gx + gy;
           if (energy > 10.0) {
-            spreadX += (x - cx) * (x - cx) * energy;
-            spreadY += (y - cy) * (y - cy) * energy;
+            sX += (x - cx) * (x - cx) * energy;
+            sY += (y - cy) * (y - cy) * energy;
           }
         }
       }
-      spreadX = math.sqrt(spreadX / totalEnergy);
-      spreadY = math.sqrt(spreadY / totalEnergy);
-    } else {
-      spreadX = 25.0;
-      spreadY = 25.0;
+      spreadX = math.sqrt(sX / totalEnergy);
+      spreadY = math.sqrt(sY / totalEnergy);
     }
 
-    double wPx;
-    double hPx;
-    switch (keys[topIdx]) {
-      case 'pcb':
-        wPx = (spreadX * 3.4 * (frameW / 128.0)).clamp(255.0, 280.0);
-        hPx = (spreadY * 3.4 * (frameH / 128.0)).clamp(315.0, 345.0);
-        break;
-      case 'cable_copper':
-        wPx = (spreadX * 2.2 * (frameW / 128.0)).clamp(170.0, 190.0);
-        hPx = (spreadY * 2.2 * (frameH / 128.0)).clamp(195.0, 215.0);
-        break;
-      case 'battery_li':
-        wPx = (spreadX * 2.4 * (frameW / 128.0)).clamp(160.0, 180.0);
-        hPx = (spreadY * 2.4 * (frameH / 128.0)).clamp(185.0, 210.0);
-        break;
-      case 'crt_monitor':
-      default:
-        wPx = (spreadX * 2.6 * (frameW / 128.0)).clamp(215.0, 245.0);
-        hPx = (spreadY * 2.6 * (frameH / 128.0)).clamp(245.0, 275.0);
-        break;
-    }
+    const scale = 3.0;
+    final wPx = (spreadX * scale * (frameW / 128.0))
+        .clamp(120.0, frameW * 0.85);
+    final hPx = (spreadY * scale * (frameH / 128.0))
+        .clamp(140.0, frameH * 0.85);
 
-    final x1 = (cx * (frameW / 128.0) - wPx / 2.0).clamp(20.0, frameW - wPx - 20.0);
-    final y1 = (cy * (frameH / 128.0) - hPx / 2.0).clamp(30.0, frameH - hPx - 30.0);
-    final bbox = [x1, y1, x1 + wPx, y1 + hPx];
+    final x1 = (cx * (frameW / 128.0) - wPx / 2.0)
+        .clamp(10.0, frameW - wPx - 10.0);
+    final y1 = (cy * (frameH / 128.0) - hPx / 2.0)
+        .clamp(10.0, frameH - hPx - 10.0);
 
-    // Calibrate confidence for production output (0.90 to 0.99)
-    final confidence = math.min(0.985, math.max(0.905, 0.90 + 0.085 * maxProb));
-
-    return _InferenceOutcome(
-      predictedKey: keys[topIdx],
-      confidence: confidence,
-      bbox: bbox,
-    );
+    return [x1, y1, x1 + wPx, y1 + hPx];
   }
 
-  _InferenceOutcome _inferFromRawBytes(
-    Uint8List bytes,
+  AiDetectionResult _buildEmptyResult(
+    int elapsedMs,
+    double weightKg,
     int frameW,
     int frameH,
   ) {
-    if (bytes.length < 12) {
-      return _InferenceOutcome(
-        predictedKey: 'pcb',
-        confidence: 0.942,
-        bbox: [45.0, 65.0, 420.0, 490.0],
-      );
-    }
-
-    double sumR = 0.0;
-    double sumG = 0.0;
-    double sumB = 0.0;
-    int samples = 0;
-
-    for (int i = 0; i < bytes.length - 2; i += 3) {
-      sumR += bytes[i];
-      sumG += bytes[i + 1];
-      sumB += bytes[i + 2];
-      samples++;
-    }
-
-    final meanR = sumR / (samples + 1);
-    final meanG = sumG / (samples + 1);
-    final meanB = sumB / (samples + 1);
-
-    final gDom = meanG / (meanR + meanB + 1.0);
-    final rDom = meanR / (meanG + meanB + 1.0);
-    final bDom = meanB / (meanR + meanG + 1.0);
-
-    String key;
-    if (gDom > rDom && gDom > bDom) {
-      key = 'pcb';
-    } else if (rDom > gDom && rDom > bDom) {
-      key = 'cable_copper';
-    } else {
-      key = 'battery_li';
-    }
-
-    return _InferenceOutcome(
-      predictedKey: key,
-      confidence: 0.945,
-      bbox: [60.0, 80.0, 400.0, 520.0],
+    final label = _labels.isNotEmpty ? _labels.first : _getBaselineLabels().first;
+    return AiDetectionResult(
+      category: label.category,
+      subCategory: label.defaultSubCategory,
+      hindiName: label.hindi,
+      marathiName: label.marathi,
+      confidence: 0.0, // Honest: no image = no confidence
+      bbox: [0, 0, 0, 0],
+      latencyMs: math.max(1, elapsedMs),
+      hazardLevel: 'SAFE',
+      hazardDescription: 'No image provided',
+      estimatedVolumeM3: 0.0,
+      fraudResult: const DensityFraudResult(
+        rhoInferred: 0,
+        zScore: 0,
+        severity: FraudSeverity.clean,
+      ),
+      usedRealModel: false,
     );
   }
 
@@ -522,6 +489,55 @@ class AiInferenceService {
     if (hazard.toLowerCase().contains('medium')) return 'MEDIUM';
     if (hazard.toLowerCase().contains('low')) return 'LOW';
     return 'SAFE';
+  }
+
+  List<AiCategoryLabel> _getBaselineLabels() => [
+        AiCategoryLabel(
+          id: 0, key: 'pcb',
+          name: 'Printed Circuit Boards (PCB)',
+          hindi: 'प्रिंटेड सर्किट बोर्ड', marathi: 'सर्किट बोर्ड',
+          defaultSubCategory: 'Mid Grade (Motherboards / GPUs)',
+          category: 'PCB', hazard: 'Low - Lead Solder',
+        ),
+        AiCategoryLabel(
+          id: 1, key: 'cable_copper',
+          name: 'Insulated Copper Cables',
+          hindi: 'तांबे के तार व केबल', marathi: 'तांब्याची वायर',
+          defaultSubCategory: 'Heavy Copper Cables (Insulated)',
+          category: 'Cables', hazard: 'None',
+        ),
+        AiCategoryLabel(
+          id: 2, key: 'battery_li',
+          name: 'Lithium-Ion & Lead Batteries',
+          hindi: 'लिथियम-आयन / लेड बैटरी', marathi: 'लिथियम बॅटरी',
+          defaultSubCategory: 'Lithium-Ion Cells (Laptop / EV / Mobile)',
+          category: 'Batteries', hazard: 'High - Fire & Acid Hazard',
+        ),
+        AiCategoryLabel(
+          id: 3, key: 'crt_monitor',
+          name: 'CRT Funnel Glass & Display',
+          hindi: 'सीआरटी मॉनिटर व डिस्प्ले ग्लास', marathi: 'सीआरटी काच',
+          defaultSubCategory: 'CRT Funnel Glass / Monitors',
+          category: 'Displays', hazard: 'Medium - Lead Impregnated',
+        ),
+        AiCategoryLabel(
+          id: 4, key: 'metal_copper',
+          name: 'Copper & Brass Scrap',
+          hindi: 'तांबा व पीतल स्क्रैप', marathi: 'तांबे व पितळ',
+          defaultSubCategory: 'Heavy Copper Cables (Insulated)',
+          category: 'Cables', hazard: 'None',
+        ),
+        AiCategoryLabel(
+          id: 5, key: 'plastic_casing',
+          name: 'ABS / PVC E-Waste Casing',
+          hindi: 'ई-कचरा प्लास्टिक आवरण', marathi: 'प्लॅस्टिक कव्हर',
+          defaultSubCategory: 'Flame-Retardant E-Plastics (ABS/HIPS)',
+          category: 'Plastics', hazard: 'Toxic - Brominated Flame Retardants (BFR)',
+        ),
+      ];
+
+  void dispose() {
+    _session?.close();
   }
 }
 

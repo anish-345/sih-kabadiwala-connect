@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/app_theme.dart';
 import '../network/network_state.dart';
 
-/// App Bar action pill allowing instant Airplane / Offline Mode simulation
 class NetworkStatusPill extends ConsumerWidget {
   const NetworkStatusPill({super.key});
 
@@ -11,11 +11,10 @@ class NetworkStatusPill extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final netState = ref.watch(networkStateProvider);
     final notifier = ref.read(networkStateProvider.notifier);
-
     final isOffline = !netState.effectiveOnline;
 
     return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
+      padding: const EdgeInsets.only(right: 4),
       child: InkWell(
         onTap: () {
           notifier.toggleOfflineMode();
@@ -23,42 +22,38 @@ class NetworkStatusPill extends ConsumerWidget {
             SnackBar(
               duration: const Duration(seconds: 2),
               content: Text(
-                isOffline
-                    ? 'ऑनलाइन मोड सक्षम: नेटवर्क कनेक्शन सक्रिय'
-                    : 'हवाई जहाज़ / ऑफ़लाइन मोड सक्रिय: सभी कार्य बिना इंटरनेट के चलेंगे',
+                isOffline ? 'Online' : 'Offline mode',
               ),
-              backgroundColor: isOffline ? Colors.green.shade800 : Colors.amber.shade900,
             ),
           );
         },
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
           decoration: BoxDecoration(
-            color: isOffline ? Colors.amber.shade900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.2),
+            color: isOffline ? const Color(0xFFFFF7ED) : AppColors.bg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isOffline ? Colors.amber.shade300 : Colors.white70,
-              width: 1.2,
+              color: isOffline ? const Color(0xFFFDBA74) : AppColors.line,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isOffline ? Icons.airplanemode_active : Icons.wifi,
-                size: 14,
-                color: Colors.white,
+                isOffline ? Icons.cloud_off_outlined : Icons.wifi,
+                size: 13,
+                color: isOffline ? AppColors.warn : AppColors.muted,
               ),
               const SizedBox(width: 4),
               Text(
                 isOffline
-                    ? 'ऑफ़लाइन (${netState.pendingOutboxCount})'
-                    : (netState.isSyncing ? 'सिंक हो रहा है…' : 'ऑनलाइन'),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                    ? 'Offline ${netState.pendingOutboxCount}'
+                    : (netState.isSyncing ? 'Sync' : 'Online'),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isOffline ? AppColors.warn : AppColors.muted,
                 ),
               ),
             ],
@@ -69,7 +64,6 @@ class NetworkStatusPill extends ConsumerWidget {
   }
 }
 
-/// Floating Banner shown across screens when in offline mode or during sync
 class OfflineSyncBanner extends ConsumerWidget {
   const OfflineSyncBanner({super.key});
 
@@ -85,19 +79,19 @@ class OfflineSyncBanner extends ConsumerWidget {
     if (netState.isSyncing) {
       return Container(
         width: double.infinity,
-        color: Colors.blue.shade800,
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+        color: AppColors.ink,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white),
             ),
             SizedBox(width: 8),
             Text(
-              'CPCB पोर्टल व राष्ट्रीय खनिज मिशन लेज़र से सिंक हो रहा है…',
+              'Syncing…',
               style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
             ),
           ],
@@ -107,27 +101,30 @@ class OfflineSyncBanner extends ConsumerWidget {
 
     return Container(
       width: double.infinity,
-      color: Colors.orange.shade900,
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+      color: const Color(0xFFFFF7ED),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.cloud_off, size: 16, color: Colors.white),
+          const Icon(Icons.cloud_off_outlined, size: 14, color: AppColors.warn),
           const SizedBox(width: 8),
-          Text(
-            'ऑफ़लाइन मोड (स्थानीय SQLite सक्रिय) • लंबित सिंक: ${netState.pendingOutboxCount}',
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+          Expanded(
+            child: Text(
+              'Offline • ${netState.pendingOutboxCount} pending',
+              style: const TextStyle(
+                color: AppColors.warn,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          const Spacer(),
           GestureDetector(
             onTap: () => notifier.toggleOfflineMode(),
             child: const Text(
-              'ऑनलाइन करें',
+              'Go online',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.ink,
                 fontSize: 12,
-                fontWeight: FontWeight.bold,
-                decoration: TextDecoration.underline,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
