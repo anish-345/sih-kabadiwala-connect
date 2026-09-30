@@ -64,8 +64,9 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          npm install -g vercel@latest
-          DEPLOY_URL=$(vercel deploy --token=$VERCEL_TOKEN --prod --yes)
+          mkdir -p .vercel
+          echo "{\"projectId\":\"$VERCEL_PROJECT_ID\",\"orgId\":\"$VERCEL_ORG_ID\"}" > .vercel/project.json
+          DEPLOY_URL=$(npx vercel deploy --prod --token=$VERCEL_TOKEN --yes)
           echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
           echo "preview-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
           echo "=================================================="
