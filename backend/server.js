@@ -90,7 +90,7 @@ app.get('*', (req, res, next) => {
   });
 });
 
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && process.argv[1] && process.argv[1].endsWith('server.js')) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
     console.log(`🚀 Kabadiwala Connect Backend & Sync Engine Active!`);
