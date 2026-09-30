@@ -6,7 +6,6 @@ import '../../../../core/providers/app_state.dart';
 import '../../../../core/services/pdf_service.dart';
 import '../../../../core/storage/database.dart';
 import '../../../../core/storage/models.dart';
-import '../../../../core/widgets/app_surface.dart';
 
 class EarningsScreen extends ConsumerStatefulWidget {
   const EarningsScreen({super.key});

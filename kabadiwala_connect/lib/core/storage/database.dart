@@ -2,10 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:sqlite3/sqlite3.dart';
-
+import 'db_engine.dart';
+import 'db_engine_platform.dart';
 import 'models.dart';
 
 /// Real SQLite Database for Kabadiwala Connect (PS 26229)
@@ -13,7 +11,7 @@ import 'models.dart';
 class AppDatabase {
   AppDatabase._(this._db);
 
-  final Database _db;
+  final DbEngine _db;
 
   // Reactive change notifiers
   final _priceChangeController = StreamController<void>.broadcast();
@@ -23,15 +21,7 @@ class AppDatabase {
   final _outboxChangeController = StreamController<void>.broadcast();
 
   static Future<AppDatabase> create({bool inMemory = false}) async {
-    Database db;
-    if (inMemory) {
-      db = sqlite3.openInMemory();
-    } else {
-      final docDir = await getApplicationDocumentsDirectory();
-      final dbPath = p.join(docDir.path, 'kabadiwala_connect.db');
-      db = sqlite3.open(dbPath);
-    }
-
+    final db = await openPlatformDb(inMemory: inMemory);
     final appDb = AppDatabase._(db);
     appDb._initSchema();
     await appDb._seedInitialData();
@@ -150,18 +140,16 @@ class AppDatabase {
       if (priceCount == 0) {
         final jsonStr = await rootBundle.loadString('assets/data/prices.json');
         final List<dynamic> list = jsonDecode(jsonStr);
-        final stmt = _db.prepare('''
-          INSERT OR REPLACE INTO price_feed (
-            price_record_id, category, sub_category, geo_region_code,
-            informal_base_rate, formal_gate_rate, epr_credit_share, ncmm_incentive,
-            net_offered_price, trend, trend_delta_percent, trend_history_json,
-            hazard_type, source, effective_from, effective_to, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''');
-
         for (final item in list) {
           final p = PriceFeedData.fromJson(item as Map<String, dynamic>);
-          stmt.execute([
+          _db.execute('''
+            INSERT OR REPLACE INTO price_feed (
+              price_record_id, category, sub_category, geo_region_code,
+              informal_base_rate, formal_gate_rate, epr_credit_share, ncmm_incentive,
+              net_offered_price, trend, trend_delta_percent, trend_history_json,
+              hazard_type, source, effective_from, effective_to, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ''', [
             p.priceRecordId,
             p.category,
             p.subCategory,
@@ -181,26 +169,24 @@ class AppDatabase {
             p.notes,
           ]);
         }
-        stmt.dispose();
       }
 
       final recyclerCount = _db.select('SELECT COUNT(*) as c FROM recyclers').first['c'] as int;
       if (recyclerCount == 0) {
         final jsonStr = await rootBundle.loadString('assets/data/recyclers.json');
         final List<dynamic> list = jsonDecode(jsonStr);
-        final stmt = _db.prepare('''
-          INSERT OR REPLACE INTO recyclers (
-            recycler_id, legal_entity_name, cpcb_reg_number,
-            facility_lat, facility_lon, distance_km, facility_address,
-            accepted_classes, logistics_capability, verification_status,
-            valid_until, rating, total_handovers, price_multiplier,
-            contact_person, contact_phone, min_lot_weight_kg, features_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''');
 
         for (final item in list) {
           final r = RecyclerData.fromJson(item as Map<String, dynamic>);
-          stmt.execute([
+          _db.execute('''
+            INSERT OR REPLACE INTO recyclers (
+              recycler_id, legal_entity_name, cpcb_reg_number,
+              facility_lat, facility_lon, distance_km, facility_address,
+              accepted_classes, logistics_capability, verification_status,
+              valid_until, rating, total_handovers, price_multiplier,
+              contact_person, contact_phone, min_lot_weight_kg, features_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ''', [
             r.recyclerId,
             r.legalEntityName,
             r.cpcbRegNumber,
@@ -221,7 +207,6 @@ class AppDatabase {
             jsonEncode(r.features),
           ]);
         }
-        stmt.dispose();
       }
 
       // Seed 2 authentic completed field transactions if empty
@@ -547,7 +532,7 @@ class AppDatabase {
     _txChangeController.close();
     _traceChangeController.close();
     _outboxChangeController.close();
-    _db.dispose();
+    _db.close();
   }
 }
 

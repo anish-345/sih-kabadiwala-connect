@@ -1,0 +1,24 @@
+{
+  "materials": [
+    {
+      "outboxId": "outbox-1",
+      "clientId": "flutter-test-device",
+      "syncedAt": 1790774718929,
+      "clientCreatedAt": 1790774718839,
+      "lotId": "LOT-999",
+      "category": "PCB",
+      "weightKg": 20
+    }
+  ],
+  "transactions": [],
+  "traceability": [],
+  "syncEvents": [
+    {
+      "eventId": "SYNC-1790774718929",
+      "clientId": "flutter-test-device",
+      "recordCount": 1,
+      "timestamp": 1790774718929,
+      "status": "VERIFIED_CPCB_LEDGER"
+    }
+  ]
+}

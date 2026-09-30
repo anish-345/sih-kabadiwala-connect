@@ -3,6 +3,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../storage/database.dart';
+import 'backend_sync_service.dart';
 
 class NetworkState {
   final bool isConnected;
@@ -75,33 +76,27 @@ class NetworkStateNotifier extends StateNotifier<NetworkState> {
     }
   }
 
-  /// Synchronize outbox queue to audit registry
+  final _syncService = BackendSyncService();
+
+  /// Synchronize outbox queue to Central CPCB Backend registry
   Future<void> triggerSync() async {
     if (state.isSyncing) return;
     state = state.copyWith(isSyncing: true);
 
     try {
-      final pending = _db.getPendingOutbox();
-      if (pending.isNotEmpty) {
-        // Simulate network transmit latency to CPCB audit ledger endpoint
-        await Future.delayed(const Duration(milliseconds: 1200));
+      final result = await _syncService.pushOutbox(_db);
+      await _syncService.pullUpdates(_db);
 
-        final ids = pending.map((e) => e.id).toList();
-        _db.markOutboxSynced(ids);
-
-        state = state.copyWith(
-          isSyncing: false,
-          pendingOutboxCount: 0,
-          lastSyncMessage: 'सफलतापूर्वक सिंक हुआ (${ids.length} रिकॉर्ड्स CPCB ऑडिट लेज़र में दर्ज)',
-        );
-      } else {
-        state = state.copyWith(
-          isSyncing: false,
-          lastSyncMessage: 'सभी रिकॉर्ड्स पहले से सिंक हैं',
-        );
-      }
+      state = state.copyWith(
+        isSyncing: false,
+        pendingOutboxCount: _db.getPendingOutbox().length,
+        lastSyncMessage: result.message,
+      );
     } catch (e) {
-      state = state.copyWith(isSyncing: false, lastSyncMessage: 'सिंक विफल: $e');
+      state = state.copyWith(
+        isSyncing: false,
+        lastSyncMessage: 'सिंक विफल: $e',
+      );
     }
   }
 

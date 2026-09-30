@@ -1,0 +1,32 @@
+[
+  {
+    "txId": "TX-20260928-001",
+    "lotId": "LOT-MH02-781",
+    "category": "PCB",
+    "subCategory": "Mid Grade (Motherboards / GPUs)",
+    "weightKg": 20,
+    "ratePerKg": 190,
+    "quotedValueInr": 3800,
+    "finalSettledInr": 3800,
+    "settlementMode": "CASH",
+    "txLifecycleState": "COMPLETED",
+    "recyclerName": "Eco-Friendly Recyclers Pvt Ltd (CPCB)",
+    "cpcbManifestNumber": "CPCB-MH-EPR-2026-9041",
+    "timestamp": 1790601868705
+  },
+  {
+    "txId": "TX-20260929-002",
+    "lotId": "LOT-MH02-789",
+    "category": "Cables",
+    "subCategory": "Heavy Copper Cables (Insulated)",
+    "weightKg": 15,
+    "ratePerKg": 510,
+    "quotedValueInr": 7650,
+    "finalSettledInr": 7650,
+    "settlementMode": "UPI",
+    "txLifecycleState": "COMPLETED",
+    "recyclerName": "Maha Green Tech Disposers",
+    "cpcbManifestNumber": "CPCB-MH-EPR-2026-9048",
+    "timestamp": 1790688268705
+  }
+]

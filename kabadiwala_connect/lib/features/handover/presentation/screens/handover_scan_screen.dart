@@ -311,8 +311,8 @@ class _ReticlePainter extends CustomPainter {
     final h = size.height;
 
     // Top-left
-    canvas.drawLine(Offset.zero, Offset(c, 0), paint);
-    canvas.drawLine(Offset.zero, Offset(0, c), paint);
+    canvas.drawLine(Offset.zero, const Offset(c, 0), paint);
+    canvas.drawLine(Offset.zero, const Offset(0, c), paint);
     // Top-right
     canvas.drawLine(Offset(w, 0), Offset(w - c, 0), paint);
     canvas.drawLine(Offset(w, 0), Offset(w, c), paint);

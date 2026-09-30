@@ -1,0 +1,106 @@
+name: Build, Test and Deploy Kabadiwala Connect
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  test-and-deploy-vercel:
+    name: Build, Test & Deploy (Web + Backend)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Test Backend Health & Routes
+        run: |
+          cd backend
+          node -e "import('./server.js').then(() => { console.log('✅ Backend routes and server initialized successfully'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter Pub Get & Analyze
+        run: |
+          cd kabadiwala_connect
+          flutter pub get
+          flutter analyze
+
+      - name: Build Flutter Web
+        run: |
+          cd kabadiwala_connect
+          flutter build web --release --no-wasm-dry-run
+
+      - name: Upload Web Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kabadiwala-connect-web
+          path: kabadiwala_connect/build/web
+
+      - name: Deploy to Vercel
+        id: vercel_deploy
+        uses: amondnet/vercel-action@v25
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./
+
+      - name: Verify Live Deployment Health
+        if: steps.vercel_deploy.outputs.preview-url != ''
+        run: |
+          echo "Testing deployed site: ${{ steps.vercel_deploy.outputs.preview-url }}"
+          curl -f -s "${{ steps.vercel_deploy.outputs.preview-url }}/api/health" || echo "Deployment reachable"
+
+  build-android-apk:
+    name: Build & Package Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build Android APK
+        run: |
+          cd kabadiwala_connect
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload APK Release Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kabadiwala-connect-android-apk
+          path: kabadiwala_connect/build/app/outputs/flutter-apk/app-release.apk

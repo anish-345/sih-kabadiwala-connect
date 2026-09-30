@@ -153,15 +153,15 @@ abstract final class AppTheme {
         ),
         labelStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.muted),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: const CardThemeData(
         color: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: const BorderRadius.all(
+          borderRadius: BorderRadius.all(
               Radius.circular(AppRadius.lg)),
-          side: const BorderSide(color: AppColors.line),
+          side: BorderSide(color: AppColors.line),
         ),
         margin: EdgeInsets.zero,
       ),

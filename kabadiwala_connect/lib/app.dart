@@ -40,6 +40,31 @@ class KabadiwalaApp extends ConsumerWidget {
         Locale('hi'),
         Locale('mr'),
       ],
+
+      // ── Responsive Layout Builder ─────────────────────────
+      builder: (context, child) {
+        return Container(
+          color: const Color(0xFF0F172A), // Dark slate aesthetic backdrop for wide desktop
+          alignment: Alignment.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 580),
+            child: Container(
+              decoration: const BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 24,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRect(
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "buildCommand": "cd kabadiwala_connect && flutter build web --no-pub",
+  "outputDirectory": "kabadiwala_connect/build/web",
+  "functions": {
+    "backend/api/index.js": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/api/index.js"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}

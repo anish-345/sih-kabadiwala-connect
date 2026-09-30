@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,6 +27,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
   final _picker = ImagePicker();
 
   String? _capturedImagePath;
+  Uint8List? _capturedImageBytes;
   String? _benchmarkAssetPath;
   String _selectedCategory = 'PCB';
   String _selectedSubCategory = 'Mid Grade (Motherboards / GPUs)';
@@ -135,11 +136,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       final picked = await _picker.pickImage(
           source: source, maxWidth: 1024, maxHeight: 1024);
       if (picked != null) {
+        final bytes = await picked.readAsBytes();
         setState(() {
+          _capturedImageBytes = bytes;
           _capturedImagePath = picked.path;
           _benchmarkAssetPath = null;
         });
-        await _runAiInference(filePath: picked.path);
+        await _runAiInference(filePath: picked.path, imageBytes: bytes);
       }
     } catch (e) {
       debugPrint('Camera error: $e');
@@ -151,18 +154,20 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     setState(() {
       _benchmarkAssetPath = assetPath;
       _capturedImagePath = null;
+      _capturedImageBytes = null;
       _weightController.text = defaultKg.toString();
     });
     await _runAiInference(filePath: assetPath);
   }
 
-  Future<void> _runAiInference({String? filePath}) async {
+  Future<void> _runAiInference({String? filePath, Uint8List? imageBytes}) async {
     setState(() => _isAnalyzing = true);
     final weight = double.tryParse(_weightController.text) ?? 20.0;
 
     final aiService = ref.read(aiInferenceServiceProvider);
     final result = await aiService.inferImage(
       filePath: filePath ?? _capturedImagePath ?? _benchmarkAssetPath,
+      imageBytes: imageBytes ?? _capturedImageBytes,
       weightKg: weight,
     );
 
@@ -323,7 +328,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                           ? _selectedSubCategory
                           : (allPrices.isNotEmpty ? allPrices.first.subCategory : null);
                       return DropdownButtonFormField<String>(
-                        value: safeDropdownValue,
+                        key: ValueKey(safeDropdownValue),
+                        initialValue: safeDropdownValue,
                         decoration: InputDecoration(
                           labelText: switch (lang) {
                             'mr' => 'विशिष्ट वर्ग',
@@ -359,7 +365,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   DropdownButtonFormField<String>(
-                    value: _conditionGrade,
+                    key: ValueKey(_conditionGrade),
+                    initialValue: _conditionGrade,
                     decoration: InputDecoration(
                       labelText: switch (lang) {
                         'mr' => 'गुणवत्ता दर्जा',
@@ -745,7 +752,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   Widget _buildImageOrCaptureArea(String lang) {
     final hasImg =
-        _capturedImagePath != null || _benchmarkAssetPath != null;
+        _capturedImageBytes != null || _capturedImagePath != null || _benchmarkAssetPath != null;
 
     if (hasImg) {
       return Stack(
@@ -753,9 +760,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            child: _capturedImagePath != null
-                ? Image.file(File(_capturedImagePath!), fit: BoxFit.cover)
-                : Image.asset(_benchmarkAssetPath!, fit: BoxFit.cover),
+            child: _capturedImageBytes != null
+                ? Image.memory(_capturedImageBytes!, fit: BoxFit.cover)
+                : (_benchmarkAssetPath != null
+                    ? Image.asset(_benchmarkAssetPath!, fit: BoxFit.cover)
+                    : const SizedBox.shrink()),
           ),
           if (_aiResult != null)
             CustomPaint(
@@ -772,6 +781,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               icon: const Icon(Icons.refresh, size: 18),
               onPressed: () => setState(() {
                 _capturedImagePath = null;
+                _capturedImageBytes = null;
                 _benchmarkAssetPath = null;
                 _aiResult = null;
               }),
@@ -934,14 +944,14 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                   border: Border.all(color: AppColors.accentBorder),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.bolt, size: 11, color: AppColors.accentMuted),
-                    SizedBox(width: 3),
+                    const Icon(Icons.bolt, size: 11, color: AppColors.accentMuted),
+                    const SizedBox(width: 3),
                     Text(
-                      'Edge ONNX AI (Offline)',
-                      style: TextStyle(
+                      res.modelEngineName ?? 'Edge ONNX AI (Offline)',
+                      style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         color: AppColors.accentMuted,

@@ -40,3 +40,10 @@ windows/flutter/generated_plugins.cmake
 
 # Logs
 *.log
+
+# Node / Backend
+node_modules/
+**/node_modules/
+.env
+**/.env
+.vercel
