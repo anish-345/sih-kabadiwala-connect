@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd kabadiwala_connect && flutter build web --no-pub",
   "outputDirectory": "kabadiwala_connect/build/web",
   "functions": {
     "backend/api/index.js": {

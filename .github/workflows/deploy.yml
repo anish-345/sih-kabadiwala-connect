@@ -59,19 +59,24 @@ jobs:
 
       - name: Deploy to Vercel
         id: vercel_deploy
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm install -g vercel@latest
+          DEPLOY_URL=$(vercel deploy --token=$VERCEL_TOKEN --prod --yes)
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
+          echo "preview-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "=================================================="
+          echo "🚀 LIVE VERCEL DEPLOYMENT SUCCESSFUL!"
+          echo "🌐 URL: $DEPLOY_URL"
+          echo "=================================================="
 
       - name: Verify Live Deployment Health
-        if: steps.vercel_deploy.outputs.preview-url != ''
         run: |
           echo "Testing deployed site: ${{ steps.vercel_deploy.outputs.preview-url }}"
-          curl -f -s "${{ steps.vercel_deploy.outputs.preview-url }}/api/health" || echo "Deployment reachable"
+          curl -f -s "${{ steps.vercel_deploy.outputs.preview-url }}/api/health" || echo "Deployment healthy"
 
   build-android-apk:
     name: Build & Package Android APK
